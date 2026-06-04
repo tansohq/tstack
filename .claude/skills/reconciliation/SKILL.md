@@ -109,6 +109,26 @@ For each layer, define:
 - What tolerance is acceptable (exact match? within rounding?)
 - What happens on mismatch (alert, auto-correct, flag)
 
+**Rounding-drift detection:** Compare your system's calculated invoice total
+(at full precision) against the provider's finalized invoice amount. Tolerance:
+within 1 cent per line item (a chosen convention, not an industry standard —
+document it as such). For high-volume invoices, also check aggregate drift
+(sum of all line-item rounding should not exceed 0.1% of invoice total).
+Persistent one-direction drift signals a rounding rule mismatch (see
+pricing-model D8) — investigate before it accumulates.
+
+**Hierarchy reconciliation** (when HIERARCHY.md exists):
+- Volume discount attribution across children: when parent gets volume pricing
+  from aggregated child usage, how are savings allocated? No standard formula —
+  document the chosen method.
+- Credit transfer audit trail: TRANSFER operations (linked DEDUCT+GRANT pairs)
+  must net to zero across pools. A sum-of-transfers check catches orphaned
+  half-transactions.
+- Per-child usage rollup must match parent-level totals. Clock skew and batch
+  delays create discrepancies — reconcile at both levels.
+- Mid-cycle child account additions create proration edge cases — flag for
+  review rather than auto-correcting.
+
 ### Step 3: Design true-up mechanics
 
 True-ups happen when reality doesn't match what was invoiced. Two directions:
@@ -199,6 +219,11 @@ fully-auto for low-value adjustments (under $5) and review for high-value.
   idempotencyKeys linking them to credit transactions and invoice line items,
   reconciliation is guesswork. The traceability chain must be designed
   upstream (METER.md idempotency → CREDITS.md ledger → invoice).
+- **Don't reconcile without shared identifiers.** If your event_id doesn't
+  appear on the provider's usage record, and the provider's line_item_id
+  doesn't appear in your ledger, reconciliation is join-by-timestamp-and-amount
+  — fragile and error-prone. The identifier chain must be designed upstream
+  (provider-integration D5).
 - **Annual committed pools mask churn signals.** A customer who decided to leave
   in month 4 shows as "retained" until month 12. Contract expiry is a lagging
   indicator — credit consumption velocity is the real-time health signal. If a

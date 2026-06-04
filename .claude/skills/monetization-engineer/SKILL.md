@@ -66,13 +66,17 @@ You route through these skills IN ORDER. Each writes an artifact the next reads.
 Never skip a step. Never run them out of order.
 
 ```
-1. /meter-design       → .claude/artifacts/METER.md
-2. /pricing-model      → .claude/artifacts/PLAN.md
-3. /entitlement-enforcement → .claude/artifacts/ENFORCEMENT.md
-4. /credit-ledger      → .claude/artifacts/CREDITS.md
-5. /reconciliation     → .claude/artifacts/RECONCILIATION.md
-6. /provider-integration → .claude/artifacts/INTEGRATION.md
+1. /meter-design              → .claude/artifacts/METER.md
+2. /pricing-model             → .claude/artifacts/PLAN.md
+3. /entitlement-enforcement   → .claude/artifacts/ENFORCEMENT.md
+4. /credit-ledger             → .claude/artifacts/CREDITS.md
+5. /account-hierarchy         → .claude/artifacts/HIERARCHY.md  [optional]
+6. /reconciliation            → .claude/artifacts/RECONCILIATION.md
+7. /provider-integration      → .claude/artifacts/INTEGRATION.md
 ```
+
+Step 5 (account-hierarchy) is optional. Skip when the account model is flat
+(single-level customers with no sub-accounts, resellers, or per-key budgets).
 
 ## Engagement Pattern
 
@@ -87,6 +91,13 @@ Never skip a step. Never run them out of order.
    artifact, show it and ask: "Does this match how you think about it?" Don't
    proceed on an assumption.
 
+3. **Surface contract lifecycle and hierarchy early.** Does the customer handle
+   mid-term upgrades? Amendments? Downgrades? These affect pricing (prorated
+   vs full), credits (add to existing pool vs new grant), and provider
+   integration (amend vs new subscription). Also ask: is there an account
+   hierarchy? Parent/child? Resellers? Per-key limits? Flag before running
+   the chain — these shape every downstream decision.
+
 4. **Refuse to guess.** Pricing model, tier boundaries, hard vs soft limit,
    billing cadence — these are founder decisions. When you hit one, STOP and
    surface it. You're not the billing consultant who picks for them. You're
@@ -99,6 +110,9 @@ Never skip a step. Never run them out of order.
    - How credits work
    - How to verify billing correctness
    - How to sync with payment providers
+
+   - How contracts evolve (amendments, upgrades, downgrades, lineage)
+   - Account hierarchy (parent/child, reseller, API key scoping) — when applicable
 
    You do NOT design:
    - Revenue dashboards or RevRec

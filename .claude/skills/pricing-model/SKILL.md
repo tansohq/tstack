@@ -217,6 +217,30 @@ keeps it simple. Map to credit-ledger: the commit = a CreditGrant of
 type PURCHASED with amount = the committed spend. Monthly usage = DEDUCT
 transactions. Year-end reconciliation = check remaining, bill if > 0.
 
+**D8 — Rounding rule.** How does your system round fractional amounts?
+
+What's at stake: mismatched rounding between your system and your payment
+processor creates penny-drift that accumulates across thousands of invoices.
+Reconciliation catches it, but prevention is cheaper. One enterprise reported
+writing off $1M annually from accumulated penny rounding errors.
+
+Options:
+
+A) Match processor's observed behavior (Stripe: round-half-up based on documented
+   examples, though Stripe never formally names the algorithm)
+   Pro: Zero drift at the boundary. Reconciliation is clean.
+   Con: Locks you to one processor's behavior. Tax rounding may differ (Stripe's
+   tax rounding is separately configurable — invoice-level vs line-item-level).
+
+B) Custom rule with Finance sign-off (only if sub-cent pricing is unavoidable)
+   Pro: May better serve your specific pricing granularity.
+   Con: Guaranteed drift. Must budget for reconciliation fixes.
+
+Default: Match your processor. Store full-precision internally (4+ decimal
+places — industry consensus). Round only at invoice presentation / provider
+sync. One rule, everywhere. Note: Stripe's rounding behavior is observed from
+examples, not formally specified — verify edge cases against their current docs.
+
 ## Anti-Patterns
 
 - **Don't price without cost.** If METER.md has no cost streams, push back.
@@ -232,6 +256,10 @@ transactions. Year-end reconciliation = check remaining, bill if > 0.
 - **Don't forget overage clarity.** The customer must understand what happens
   at limit. "You get 200 calls. Call 201 costs $0.30." Not "usage-based
   pricing applies after your allocation."
+- **Don't use a different rounding rule than your payment processor.** Stripe's
+  examples are consistent with round-half-up. Banker's rounding
+  (round-half-to-even) diverges on .5 cases. This creates exactly the
+  mismatch reconciliation exists to catch.
 
 ## Tanso Reference Architecture
 

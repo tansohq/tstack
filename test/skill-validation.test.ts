@@ -117,6 +117,11 @@ const CHAIN: {
     output: "CREDITS.md",
   },
   {
+    skill: "account-hierarchy",
+    inputs: ["CREDITS.md", "ENFORCEMENT.md"],
+    output: "HIERARCHY.md",
+  },
+  {
     skill: "reconciliation",
     inputs: ["METER.md", "PLAN.md", "ENFORCEMENT.md", "CREDITS.md"],
     output: "RECONCILIATION.md",
@@ -212,7 +217,7 @@ describe("CLAUDE.md routing table", () => {
   test("chain order in CLAUDE.md matches artifact dependency order", () => {
     // Extract the chain line: "meter → pricing → enforcement → credits → reconciliation → integration"
     const chainMatch = claudeMd.match(
-      /meter\s*→\s*pricing\s*→\s*enforcement\s*→\s*credits\s*→\s*reconciliation\s*→\s*integration/,
+      /meter\s*→\s*pricing\s*→\s*enforcement\s*→\s*credits\s*→\s*\[hierarchy\]\s*→\s*reconciliation\s*→\s*integration/,
     );
     expect(chainMatch).not.toBeNull();
 
@@ -222,6 +227,7 @@ describe("CLAUDE.md routing table", () => {
       pricing: "pricing-model",
       enforcement: "entitlement-enforcement",
       credits: "credit-ledger",
+      "[hierarchy]": "account-hierarchy",
       reconciliation: "reconciliation",
       integration: "provider-integration",
     };
@@ -245,8 +251,8 @@ describe("Allowed-tools consistency", () => {
     (d) => d !== "monetization-engineer",
   );
 
-  test("there are exactly 6 non-orchestrator skills", () => {
-    expect(nonOrchestratorSkills.length).toBe(6);
+  test("there are exactly 7 non-orchestrator skills", () => {
+    expect(nonOrchestratorSkills.length).toBe(7);
   });
 
   test("all non-orchestrator skills have identical allowed-tools", () => {

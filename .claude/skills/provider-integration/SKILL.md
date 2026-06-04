@@ -49,6 +49,16 @@ The provider owns:
 
 The integration syncs between them. Not a replacement — a layer on top.
 
+**Contract lifecycle:** Your provider typically owns subscription terms, but
+your system should track contract intent (amendments, upgrades, lineage).
+Mid-term upgrades amend the existing subscription — don't create a new one.
+Stripe's subscription schedule model uses phases within a single subscription
+(up to 10 phases, subscription ID remains constant). Link each amendment to
+the prior state so Finance can audit the change history. At minimum, your
+system should record: what changed, when, why, and what the state was before.
+Whether this lives in your system or the provider depends on D0 (capability
+ownership).
+
 ## Inputs
 
 Reads all upstream artifacts:
@@ -233,6 +243,40 @@ B) Idempotent retry (each step is independently retriable)
 Default: **Idempotent retry.** Each side effect (create entitlement,
 grant credits, update subscription state) has its own idempotency key derived
 from the webhook event ID + step name. Partial failures are resumable.
+
+**D4 — Comp credit sync boundary.**
+
+What's at stake: how promotional credits interact with the payment processor
+affects both invoice accuracy and revenue recognition.
+
+Rule: Purchased credits sync to provider (real revenue, deferred until
+consumed). Promotional credits CAN sync to provider — Stripe supports
+`category=promotional`, they reduce the invoice total and are applied before
+paid credits. Pure comps (support goodwill, sales incentives that should never
+appear on any invoice) stay internal-only.
+
+The distinction is revenue recognition, not sync. Under ASC 606: paid
+credits = deferred revenue. Promotional credits = reduction of transaction
+price. Track grant types separately in your ledger (credit-ledger already
+does this via PLAN_INCLUDED/PURCHASED/PROMOTIONAL).
+
+**D5 — Cross-system identifiers.**
+
+Every system in the billing chain must speak the same IDs. Define the canonical
+identifier set at design time. Map provider IDs (Stripe's `sub_xxx`, `ii_xxx`)
+to your internal IDs at the integration boundary, not deep in core logic.
+
+Minimum set:
+- customer_id (yours) ↔ stripe_customer_id
+- subscription_id (yours) ↔ stripe_subscription_id
+- plan_id (yours) ↔ stripe_product_id + stripe_price_id
+- credit_pool_id (yours, no Stripe equivalent)
+- event_id (yours) ↔ stripe_meter_event_id
+- idempotency_key (shared across all systems)
+
+No industry standard framework exists for this. But without it, reconciliation
+is join-by-timestamp-and-amount — fragile and error-prone. Quarterly audits
+for orphaned mappings are cheap insurance.
 
 ## Anti-Patterns
 

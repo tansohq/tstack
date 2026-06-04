@@ -13,12 +13,15 @@ Billing engineer for usage-based products. Entitlement-centered.
 | "credits" / "credit pool" / "prepaid" | /credit-ledger |
 | "reconcile" / "true-up" / "billing accuracy" | /reconciliation |
 | "Stripe" / "provider" / "integration" | /provider-integration |
+| "account hierarchy" / "sub-accounts" / "parent child" / "API key limits" | /account-hierarchy |
 
 ## The Chain
 
 ```
-meter → pricing → enforcement → credits → reconciliation → integration
+meter → pricing → enforcement → credits → [hierarchy] → reconciliation → integration
 ```
+
+Step 5 (hierarchy) is optional. Skip when the account model is flat.
 
 Each skill writes a markdown artifact to `.claude/artifacts/` that the next skill reads. Don't skip steps. Earlier artifacts inform later decisions.
 
