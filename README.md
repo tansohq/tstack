@@ -18,13 +18,15 @@ tstack designs usage-based monetization systems for SaaS products. It's entitlem
 
 ## Install
 
-Clone into your skills directory:
-
 ```bash
-git clone https://github.com/tansohq/tstack.git ~/.claude/skills/tstack
+git clone https://github.com/tansohq/tstack.git
+cd tstack
+./setup
 ```
 
-Or symlink if you keep it elsewhere:
+The setup script symlinks tstack into `~/.claude/skills/tstack` and verifies the skills are accessible. Run it again anytime — it's idempotent.
+
+**Manual alternative:** If you prefer, symlink directly:
 
 ```bash
 ln -s /path/to/tstack ~/.claude/skills/tstack
