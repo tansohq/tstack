@@ -45,9 +45,9 @@ Don't use credits when:
 - The product is purely boolean (feature on/off)
 - The customer has unlimited access within their tier
 
-Himanshu's pain: "Crediting is manual because Stripe only supports usage
-events, not dollar-based events." His customers need dollar-value credits
-applied against usage — Stripe can't represent this, so it's all manual.
+Common pain: "Crediting is manual because Stripe only supports usage events,
+not dollar-based events." Customers need dollar-value credits applied against
+usage — Stripe can't represent this, so it's all manual.
 
 ## Inputs
 
@@ -216,6 +216,15 @@ B) Abstract units (1 credit = 1 unit of value, priced by you)
 No default — depends on whether the product's pricing is transparent
 (developer-facing APIs usually are) or abstracted (consumer products often are).
 
+Note on theory vs practice: value-based credit weights (1 credit = 1 unit of
+customer value delivered) are prescribed as the correct approach. In practice,
+most companies in production use cost-based weights (1 credit = proportional to
+your cost to serve). The gap is wide. Either the market hasn't caught up to the
+theory, or the analysis required to establish value-based weights exceeds what
+early-stage companies can resource. Probably both. Don't let the ideal block
+shipping — cost-based weights that you adjust over time are a valid starting
+position.
+
 ## Anti-Patterns
 
 - **Don't allow negative balances.** If hardLimit=true, the entitlement check
@@ -225,13 +234,25 @@ No default — depends on whether the product's pricing is transparent
   reconciliation trustworthy. If you need to "fix" a transaction, create a
   REVERSE and a new GRANT/DEDUCT.
 - **Don't skip idempotency on grants.** `CreditGrant.idempotencyKey` prevents
-  double-grants from webhook retries. Himanshu's Stripe webhooks fire multiple
-  times — without dedup, the customer gets 2x credits.
+  double-grants from webhook retries. Stripe webhooks fire multiple times —
+  without dedup, the customer gets 2x credits.
 - **Don't FIFO across pools.** FIFO is within a single pool. If a customer has
   two pools (different denominations), each has its own FIFO order. Don't mix.
 - **Don't expire purchased credits.** Customer paid real money. Expiring
   purchased credits is a trust violation. Only expire promotional and
   plan-included grants.
+- **Failed events must not consume credits.** The deduction trigger is output,
+  not input. If the action the customer initiated fails (API error, timeout,
+  downstream rejection), no credits are deducted. The customer pays for
+  successful outcomes, not attempts. This is the leading cause of trust failure
+  in credit-based pricing — charging for something that didn't work. Non-negotiable.
+- **Non-expiring credits create unbounded deferred revenue liability.** This
+  isn't a preference — it's an accounting reality. Every unspent credit sits
+  as a liability on the balance sheet. The question is how long (capped rollover
+  vs hard expiry), not whether to bound it. Purchased credits feel like they
+  "should" never expire, but even they need a contractual window (12-24 months)
+  or the liability grows without bound.
+
 
 ## Tanso Primitives
 

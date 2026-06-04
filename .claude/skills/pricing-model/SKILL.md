@@ -33,18 +33,19 @@ and "invoice line item" is unbuilt. That mapping is PlanFeatureRule.
 
 Real examples of the gap:
 
-**Michael Oeth (Voice AI):** "Monthly minimum ($50 flat) + per-call overage or
-graduated tiering (e.g., 100-200 calls per-call)." He knows the shape but not
-the tiers. And his cost stack (telephony + LLM + compute) means the margin per
-call varies by duration and model — pricing must account for that or he bleeds
-on long calls.
+**Voice AI (per-call billing):** "Monthly minimum ($50 flat) + per-call overage
+or graduated tiering (e.g., 100-200 calls per-call)." The founder knows the
+shape but not the tiers. And a cost stack of telephony + LLM + compute means
+the margin per call varies by duration and model — pricing must account for
+that or they bleed on long calls.
 
-**Himanshu (Hubble):** "Stripe checkout can't combine flat + usage fees." The
-pricing model exists in his head but Stripe's data model can't represent it.
-He had to build a custom PLG UI just to show the price correctly.
+**Billing platform (IoT devices):** "Stripe checkout can't combine flat + usage
+fees." The pricing model exists in the founder's head but Stripe's data model
+can't represent it. Had to build a custom PLG UI just to show the price
+correctly.
 
-**Corey (Cadeti):** "Graduated tiers + per-unit pricing + plan feature rules."
-Doug confirmed Tanso covers this out of the box. But Corey's volatile usage
+**B2B2G (government procurement):** "Graduated tiers + per-unit pricing + plan
+feature rules." Tanso covers this out of the box. But volatile usage
 ("sometimes not enough transactions") means the pricing model needs a floor.
 
 ## Inputs
@@ -167,6 +168,25 @@ minute? Credits add a translation layer — only use them when the billing unit
 is too variable to price directly (e.g., LLM tokens with different models
 at different costs).
 
+**D6 — Which dial are you turning?** Credit pricing has two adjustment levers,
+and they behave completely differently:
+
+- **Price per credit** (visible to customer): Changes everything. Announces a
+  "price change." Customers notice, compare to old pricing, may churn. Use for
+  broad repricing events, competitive repositioning, or when you need to
+  communicate that value has changed.
+
+- **Credits per action** (less visible): Changes specific actions without
+  announcing a price change. "Image generation now costs 3 credits instead of 2"
+  is invisible pricing surgery — the credit price didn't change, the weight did.
+  Use for correcting cost mismatches on individual actions, responding to cost
+  changes in your supply chain (LLM price drops), or extracting more value from
+  high-value actions without a pricing event.
+
+These are the primary levers for competitive response, value extraction, and
+correcting mistakes. Know which dial you're turning. Adjusting credits-per-action
+is a scalpel; adjusting price-per-credit is a megaphone.
+
 Use the decision format:
 
 ```
@@ -196,9 +216,9 @@ My lean: <which and why, OR "no lean">
 - **Don't default to credits.** Credits add cognitive overhead for the customer.
   Use direct pricing (per-call, per-request) unless the billing unit's cost
   genuinely varies too much to price directly.
-- **Don't ignore the floor.** Volatile-usage products (Corey: "sometimes not
-  enough transactions") need a base price or minimum commit. Pure usage with
-  no floor = unpredictable revenue.
+- **Don't ignore the floor.** Volatile-usage products ("sometimes not enough
+  transactions") need a base price or minimum commit. Pure usage with no
+  floor = unpredictable revenue.
 - **Don't forget overage clarity.** The customer must understand what happens
   at limit. "You get 200 calls. Call 201 costs $0.30." Not "usage-based
   pricing applies after your allocation."

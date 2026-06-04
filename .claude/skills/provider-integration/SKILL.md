@@ -26,10 +26,10 @@ provider (Stripe, Paddle, etc.). Tanso is the "system of action" — real-time
 entitlement checks, credit management, usage tracking. The provider is the
 "system of record" — invoices, payments, subscriptions, tax.
 
-Himanshu's framing: "Views Stripe as a good system of record but believes
-third-party tools are better as a 'system of action' for complex cases."
-Corey's framing: "Doesn't want to become a Stripe" — rejected building his
-own settlement layer.
+Billing platform operators view Stripe as a good system of record but believe
+third-party tools are better as a "system of action" for complex cases.
+Prospects consistently reject building their own settlement layer — they don't
+want to become a Stripe.
 
 ## The Boundary
 
@@ -111,8 +111,8 @@ Two directions, different concerns:
 ### Step 2: Design the forwarding
 
 For usage-based billing on Stripe, events must be forwarded to Stripe meters
-so invoices are accurate. This is Himanshu's pain — Stripe creates $0 draft
-invoices because usage hasn't been forwarded yet.
+so invoices are accurate. Without forwarding, Stripe creates $0 draft invoices
+because usage data hasn't arrived yet.
 
 Key question: **when** to forward?
 
@@ -163,7 +163,7 @@ A) Real-time (forward each event to provider immediately)
 
 B) Batch (forward every N minutes or events)
    Pro: Efficient. Handles rate limits naturally.
-   Con: Invoice stale between batches. Himanshu's $0-draft problem.
+   Con: Invoice stale between batches. The $0-draft problem.
 
 C) At invoice finalization (forward totals before Stripe finalizes)
    Pro: One sync per invoice period. Most efficient.
@@ -171,7 +171,7 @@ C) At invoice finalization (forward totals before Stripe finalizes)
 
 Default: **At invoice finalization** for v1. Forward aggregated usage
 when Stripe signals invoice is about to finalize (`invoice.upcoming` webhook).
-Simplest integration, avoids rate limits, solves Himanshu's $0-draft problem.
+Simplest integration, avoids rate limits, solves the $0-draft problem.
 Override toward real-time when the customer needs live Stripe dashboard
 accuracy (rare — most customers use Tanso's dashboard instead).
 
@@ -217,14 +217,14 @@ from the webhook event ID + step name. Partial failures are resumable.
 - **Don't duplicate state.** Tanso is the source of truth for entitlements.
   Stripe is the source of truth for payments. Don't store payment state in
   Tanso or entitlement state in Stripe. Sync, don't mirror.
-- **Don't build your own settlement.** Corey's instinct was right — don't
-  become a Stripe. Use the provider for what it's good at (collecting money)
-  and own what it's bad at (real-time entitlement enforcement).
+- **Don't build your own settlement.** Don't become a Stripe. Use the provider
+  for what it's good at (collecting money) and own what it's bad at (real-time
+  entitlement enforcement).
 - **Don't skip webhook idempotency.** Stripe fires webhooks multiple times.
   Without dedup, you'll double-grant credits on every retry. This is exactly
-  how Himanshu ended up tracking revenue in Google Sheets.
-- **Don't void+regenerate invoices.** Himanshu's pain. Prefer adjustments on
-  the next invoice over void+regenerate cycles that break RevRec.
+  how billing teams end up tracking revenue in Google Sheets.
+- **Don't void+regenerate invoices.** Voiding Stripe invoices messes up RevRec.
+  Prefer adjustments on the next invoice over void+regenerate cycles.
 
 ## Tanso Primitives
 

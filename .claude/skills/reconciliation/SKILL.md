@@ -27,14 +27,14 @@ item on an invoice. Every credit deduction should have a corresponding event.
 If these don't match, something is wrong.
 
 This is NOT rev-ops reporting. Not MRR dashboards. Not churn prediction.
-Himanshu (Hubble) explicitly advised against building that layer — it's a tar
-pit. This skill handles one question: **did we bill correctly?**
+Billing platform operators explicitly advise against building that layer — it's
+a tar pit. This skill handles one question: **did we bill correctly?**
 
 ## Why This Is Hard
 
-Himanshu's exact pain: "Usage-based invoicing is broken in Stripe: invoices
-are created at $0 draft before usage data is finalized, then updated on
-finalization. Hard to confirm accuracy; sometimes requires void + regenerate."
+Common pain with Stripe: "Usage-based invoicing is broken: invoices are created
+at $0 draft before usage data is finalized, then updated on finalization. Hard
+to confirm accuracy; sometimes requires void + regenerate."
 
 The problem is timing. Events arrive continuously. Invoices are periodic.
 Between the event and the invoice, things can go wrong:
@@ -119,7 +119,7 @@ True-ups happen when reality doesn't match what was invoiced. Two directions:
   applied, service outage credits. Mechanism: credit memo or adjustment on
   next invoice.
 
-Himanshu: "True-ups are fully manual because Stripe only supports usage
+Common pain: "True-ups are fully manual because Stripe only supports usage
 events, not dollar-based events." Tanso's credit ledger can represent
 dollar-value adjustments natively — this is the differentiator.
 
@@ -175,7 +175,7 @@ B) Review-then-apply (system detects, human approves)
 
 C) Manual (spreadsheet reconciliation)
    Pro: Full control.
-   Con: Himanshu's current pain. Doesn't scale.
+   Con: Common pain for billing platforms today. Doesn't scale.
 
 Default: **Review-then-apply** for v1. Surface discrepancies, let the
 operator decide. Fully automated after confidence is built. Override toward
@@ -191,13 +191,20 @@ fully-auto for low-value adjustments (under $5) and review for high-value.
 - **Don't build reporting here.** "Revenue by customer" is analytics. "Did
   customer X get billed for all their events?" is reconciliation. This skill
   does the second one only.
-- **Don't void+regenerate as a pattern.** Himanshu's pain — voiding Stripe
-  invoices messes up RevRec. Prefer adjustments on the next invoice over
-  void+regenerate of the current one.
+- **Don't void+regenerate as a pattern.** Voiding Stripe invoices messes up
+  RevRec. Prefer adjustments on the next invoice over void+regenerate of the
+  current one.
 - **Don't reconcile what you can't trace.** If events don't have
   idempotencyKeys linking them to credit transactions and invoice line items,
   reconciliation is guesswork. The traceability chain must be designed
   upstream (METER.md idempotency → CREDITS.md ledger → invoice).
+- **Annual committed pools mask churn signals.** A customer who decided to leave
+  in month 4 shows as "retained" until month 12. Contract expiry is a lagging
+  indicator — credit consumption velocity is the real-time health signal. If a
+  customer's weekly credit burn drops 60% mid-contract, that's a churn signal
+  NOW, not in 8 months when the contract expires. Reconciliation should surface
+  consumption velocity changes, not just billing accuracy. Don't confuse
+  contract status with product health.
 
 ## Tanso Primitives
 

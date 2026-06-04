@@ -30,20 +30,19 @@ wrong foundation.
 
 The billing unit is never obvious. Three patterns from real prospects:
 
-**No natural unit (Cadeti/Corey):** B2B2G product with three candidate events —
-data movement, document analysis, RFP generation. Private-sector billing to
-consultancies has "no natural unit." The billing unit had to be invented, not
-discovered.
+**No natural unit (B2B2G product):** Three candidate events — data movement,
+document analysis, RFP generation. Private-sector billing to consultancies has
+"no natural unit." The billing unit had to be invented, not discovered.
 
-**Granularity mismatch (Hubble/Himanshu):** Billing on monthly active devices,
-but need daily active devices for accuracy. "Weekly skipped due to backend
-cost." The billing unit exists but the aggregation window is wrong — too coarse
-to be accurate, too fine to be affordable. Himanshu manages entitlements
+**Granularity mismatch (IoT device management):** Billing on monthly active
+devices, but need daily active devices for accuracy. "Weekly skipped due to
+backend cost." The billing unit exists but the aggregation window is wrong —
+too coarse to be accurate, too fine to be affordable. Entitlements managed
 internally via webhooks because Stripe can't enforce in real-time.
 
-**Compound events (Michael Oeth/Voice AI):** A phone call is start + token
-events + end, grouped by `flow_id`. The entitlement check gates at call-start;
-the usage event fires at call-end.
+**Compound events (Voice AI):** A phone call is start + token events + end,
+grouped by `flow_id`. The entitlement check gates at call-start; the usage
+event fires at call-end.
 
 ## Inputs
 
@@ -105,7 +104,7 @@ Map to Tanso's EventIngestionRequest:
 - `idempotencyKey` — dedup key (critical: double-counting usage = double-billing)
 - `meta` — cost-relevant properties (model name, region, file size)
 
-For compound events (like Michael's phone calls), define:
+For compound events (like voice AI phone calls), define:
 - A grouping key (`flow_id`) that ties sub-events into one billable unit
 - Which sub-event carries the usage units (usually the end event with final tallies)
 - How cost rolls up across sub-events
@@ -114,11 +113,11 @@ For compound events (like Michael's phone calls), define:
 
 This is where founders get it wrong. Three patterns:
 
-- **Per-event billing** (Michael): each call is billed individually. Simple,
+- **Per-event billing** (voice AI): each call is billed individually. Simple,
   but invoice line items grow with usage.
-- **Per-period aggregation** (Himanshu): sum usage across window, bill once.
+- **Per-period aggregation** (IoT devices): sum usage across window, bill once.
   Simpler invoicing, but the window choice (daily vs monthly) affects accuracy.
-- **Threshold-based** (Corey): count until threshold, then bill differently.
+- **Threshold-based** (B2B2G): count until threshold, then bill differently.
   Requires tracking cumulative usage.
 
 ### Step 4: Define reset cadence
@@ -160,11 +159,12 @@ value (reply = meeting booked). STOP and present all with the margin and
 comprehension tradeoffs.
 
 **D1 — Multiple candidate billing units.** When a product has more than one
-plausible event to bill on (Corey's three: data movement, doc analysis, RFP
-gen), STOP. Present each with cost implications.
+plausible event to bill on (e.g., data movement, doc analysis, RFP generation),
+STOP. Present each with cost implications.
 
-**D2 — Aggregation window.** When the "right" window isn't obvious (Himanshu's
-monthly-vs-daily tradeoff), STOP. Present accuracy vs cost tradeoff.
+**D2 — Aggregation window.** When the "right" window isn't obvious (e.g.,
+monthly-vs-daily tradeoff for device counting), STOP. Present accuracy vs cost
+tradeoff.
 
 **D3 — Compound vs simple event.** When it's unclear whether to bill the
 session or the sub-events (phone call vs individual token events), STOP.
@@ -212,8 +212,8 @@ My lean: <which and why, OR "no lean">
   an event, the entitlement check can't be cost-aware — it's just a counter.
   That's a feature flag, not an entitlement system.
 - **Don't skip idempotency.** Every event needs a dedup key. Double-counted
-  usage = double-billing = trust-destroying. Himanshu's Stripe pain started
-  with events double-firing and invoices being wrong.
+  usage = double-billing = trust-destroying. Common Stripe pain: events
+  double-fire and invoices come out wrong.
 - **Don't conflate billing unit with feature.** "Access to analytics" is a
   feature (boolean entitlement). "Number of reports generated" is a billing
   unit (metered entitlement). They're different PlanFeatureRule types.

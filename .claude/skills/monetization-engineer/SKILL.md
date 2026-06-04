@@ -35,28 +35,28 @@ in a spreadsheet. You untangle that.
 ## How Tanso Actually Works (Not How Billing Generically Works)
 
 1. **Find the billing unit.** Not "API calls" — the specific action the
-   customer's entitlement gates on. For Corey it was data-movement +
+   customer's entitlement gates on. One B2B2G prospect had data-movement +
    document-analysis + RFP-generation (three candidate units, one product).
-   For Himanshu it was monthly active devices expanding to daily for accuracy.
-   The billing unit is always weirder than the founder thinks.
+   A billing platform customer had monthly active devices expanding to daily
+   for accuracy. The billing unit is always weirder than the founder thinks.
 
-2. **Know the cost before you allow it.** This is Corey's "pre-transaction
-   cost-aware" framing. The entitlement check isn't just "do they have quota
-   left?" — it's "do they have quota left AND can we afford this event given
-   their credit balance and the pass-through cost?" Without cost awareness
-   in the gate, you've built a feature flag. With it, you've built an
-   entitlement system that protects both the customer's budget and yours.
+2. **Know the cost before you allow it.** The "pre-transaction cost-aware"
+   framing. The entitlement check isn't just "do they have quota left?" —
+   it's "do they have quota left AND can we afford this event given their
+   credit balance and the pass-through cost?" Without cost awareness in the
+   gate, you've built a feature flag. With it, you've built an entitlement
+   system that protects both the customer's budget and yours.
 
 3. **Demo the entitlement check.** The moment that converts prospects: show
    them `POST /api/v1/client/entitlements` with a UsageContext, get back
-   `wouldExceedLimit: true/false` BEFORE the event happens. Michael's reaction:
+   `wouldExceedLimit: true/false` BEFORE the event happens. Prospect reaction:
    "That's really nice... this is a big problem for SaaS." This is the product.
    The invoice is a side effect.
 
-3. **Don't build rev-ops.** Himanshu runs a billing platform. His explicit
-   advice: the reporting layer is a tar pit. Tanso handles engineering
-   correctness (did we bill what we consumed?). Revenue dashboards, RevRec,
-   forecasting — those are someone else's product.
+3. **Don't build rev-ops.** Advice from a billing platform operator: the
+   reporting layer is a tar pit. Tanso handles engineering correctness (did
+   we bill what we consumed?). Revenue dashboards, RevRec, forecasting —
+   those are someone else's product.
 
 ## The Chain
 
@@ -146,7 +146,7 @@ These primitives already exist in tanso-core. Use them by name — don't reinven
 - **Don't abstract too early.** Name the concrete event, the concrete field, the concrete tier.
 - **Don't guess on pricing.** The pricing model is the founder's decision. Surface it, don't make it.
 - **Don't scope-creep into reporting.** Engineering correctness (did we bill what we consumed?) is in scope. Revenue dashboards are not.
-- **Don't ignore margin.** Pricing without cost awareness is incomplete. Michael's telephony at 0.3c/min matters.
+- **Don't ignore margin.** Pricing without cost awareness is incomplete. Pass-through costs like telephony at 0.3c/min matter.
 
 ## Activation
 
@@ -164,7 +164,7 @@ like?" and work backward from the invoice. You start with the entitlement check
 and work forward. The question isn't "how much do we charge?" — it's "what
 should we ALLOW, based on what they've paid and what it costs us?"
 
-This is Corey's "pre-transaction cost-aware" framing. This is why Michael
-reacted to the simulation API. This is why Himanshu said Stripe is record-only
-and you need action-layer on top. The entitlement check IS the product. The
-invoice is the receipt.
+This is the "pre-transaction cost-aware" framing. This is why prospects react
+to the simulation API. This is why billing platform operators say Stripe is
+record-only and you need an action-layer on top. The entitlement check IS the
+product. The invoice is the receipt.

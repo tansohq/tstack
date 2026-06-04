@@ -26,10 +26,10 @@ You design the real-time allow/deny gate. This is the product. Not the invoice,
 not the dashboard, not the pricing page — the moment the customer's application
 asks "can my user do this?" and gets an answer in milliseconds.
 
-Himanshu (Hubble) manages entitlements internally via webhooks because Stripe
-can't do this. He stores entitlement state in his own system, builds his own
-customer dashboard, exposes his own API. He'd pay $20K/year for someone else
-to do it. That someone is Tanso.
+One billing platform customer manages entitlements internally via webhooks
+because Stripe can't do this. Stores entitlement state in their own system,
+builds their own customer dashboard, exposes their own API. Would pay $20K/year
+for someone else to do it. That someone is Tanso.
 
 ## What Makes This Not a Feature Flag
 
@@ -40,8 +40,8 @@ A feature flag is a boolean: on or off. An entitlement check is:
   without actually consuming anything.
 - **Time-aware**: "Your plan resets in 3 days. You have 153 remaining."
 
-Corey called this "pre-transaction cost-aware logic." Michael's reaction to
-seeing it: "That's really nice... this is a big problem for SaaS."
+One prospect called this "pre-transaction cost-aware logic." Another's reaction
+to seeing it: "That's really nice... this is a big problem for SaaS."
 
 The simulation API (`POST /api/v1/client/entitlements` with UsageContext) is
 the demo moment. The customer can dry-run "what if I consume 50 more units?"
@@ -102,7 +102,7 @@ Read PLAN.md. For each feature with a PlanFeatureRule, determine the check type:
 - **Boolean**: feature is enabled or not. No usage tracking. Just `isEnabled`.
   Example: "Access to advanced analytics" — on in Growth, off in Starter.
 - **Metered**: feature has a usage limit. Tracks used/limit/remaining.
-  Example: "1000 active devices per month" — Himanshu's billing unit.
+  Example: "1000 active devices per month" — an IoT device management product.
 - **Credit-backed**: feature consumes from a credit pool. Tracks balance.
   Example: "500 credits per month, each event costs 1-3 credits."
 
@@ -124,33 +124,48 @@ pool. Check cheap things first.
 
 This is the critical decision. For EVERY metered feature, surface:
 
-### D1 — Hard vs soft limit
+### D1 — At-limit behavior
 
-What's at stake: Hard limit blocks the customer's application mid-flow.
-Soft limit lets them exceed and bills overage. Different products need
-different answers. No default — always ask.
+What's at stake: What happens when the customer hits their limit determines
+whether they trust you. Different products, different answers. No default —
+always ask.
 
 Options:
 
-A) Hard limit (deny at zero)
-   Pro: No surprise bills. Customer controls their spend.
-        Michael wanted this — gate calls before they happen.
+A) Hard stop — deny at limit. Customer controls spend absolutely.
+   Pro: No surprise bills. Predictable. Voice AI products want this — gate
+        calls before they happen.
    Con: Customer's end-user hits a wall. If the product is customer-facing
-        (voice AI answering phones), a hard deny means a missed call.
+        (voice AI answering phones), hard deny means a missed call.
 
-B) Soft limit (allow, flag, bill overage)
-   Pro: No service disruption. Himanshu's pattern — allow usage, reconcile later.
-   Con: Customer gets a surprise bill. Trust erosion if overages aren't
-        communicated clearly. Reconciliation complexity.
+B) Soft cap — allow overage, bill on next invoice.
+   Pro: No service disruption. Common pattern — allow usage, reconcile later.
+   Con: Surprise bill. Trust erosion if overages aren't communicated clearly.
 
-C) Soft with notification threshold
-   Pro: Warn at 80%, allow until hard cap at 120%. Best UX.
-   Con: Two thresholds to configure per feature. More complex.
+C) Throttle — degrade service (rate limit, lower priority) rather than deny.
+   Pro: Service continues, just slower. No surprise bill. No hard wall.
+   Con: Degraded experience may frustrate users. Harder to implement per-feature.
+
+D) Headroom — automatic 10-20% buffer above stated limit, hard stop at buffer edge.
+   Pro: Absorbs spikes without customer action. Feels generous.
+   Con: Actual limit is invisible to customer (they see 1000 but real cap is 1200).
+        Creates confusion if they hit the real wall.
+
+E) Over-at-discount — overage allowed at a lower per-unit rate (rewards volume).
+   Pro: Incentivizes staying on platform vs switching. Heavy users feel rewarded.
+   Con: Revenue per unit decreases at scale. Complicates invoice line items.
+
+F) Flex-and-re-up — grace period on overage, then customer chooses: pay one-time
+   for the overage or recommit at a higher tier.
+   Pro: Converts overages into upsell conversations. Customer has agency.
+   Con: Requires operational follow-up (sales/CS must act during grace period).
+        Grace period length is another decision.
 
 Present with the specific feature and customer context. "For a voice AI
-answering inbound calls, hard deny means a caller hears silence. For a
-data pipeline processing documents, hard deny means a job fails and retries
-later — recoverable."
+answering inbound calls, hard stop means a caller hears silence. For a
+data pipeline processing documents, hard stop means a job fails and retries
+later — recoverable. For a PLG product growing users organically, flex-and-re-up
+turns growth into upgrade conversations."
 
 ### D2 — Fail-open vs fail-closed
 
@@ -215,7 +230,7 @@ Where in the customer's flow does the check happen?
 
 ## Decision Points — STOP and Ask
 
-**D1 — Hard vs soft limit.** No default. Always surface per feature. See
+**D1 — At-limit behavior.** No default. Always surface per feature. See
 Step 3 above.
 
 **D2 — Fail mode.** Default fail-open. Surface for confirmation, override
@@ -245,8 +260,8 @@ fine. This constrains the enforcement architecture (caching, read replicas).
   un-place a call. Check BEFORE, record AFTER.
 - **Don't hide the limit.** The customer must see their usage, limit, and
   remaining in the API response. Opaque "denied" with no context is hostile.
-  Himanshu built an internal customer dashboard specifically because Stripe
-  doesn't surface this.
+  Billing platforms build internal customer dashboards specifically because
+  Stripe doesn't surface this.
 - **Don't skip simulation.** The `wouldExceedLimit` dry-run is the
   differentiator. Without it, the customer has to guess whether their next
   batch will exceed — and guessing wrong means either a blocked job or a
