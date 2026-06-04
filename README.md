@@ -32,22 +32,54 @@ ln -s /path/to/tstack ~/.claude/skills/tstack
 
 ## How It Works
 
-Skills run in a fixed order. Each one writes a markdown artifact, and the next skill in the chain reads it:
+Run `/monetization-engineer` to start. It walks you through the chain, one skill at a time:
 
 ```
-/meter-design             → .claude/artifacts/METER.md
-/pricing-model            → .claude/artifacts/PLAN.md
-/entitlement-enforcement  → .claude/artifacts/ENFORCEMENT.md
-/credit-ledger            → .claude/artifacts/CREDITS.md
-/reconciliation           → .claude/artifacts/RECONCILIATION.md
-/provider-integration     → .claude/artifacts/INTEGRATION.md
+                          ┌─────────────────────────────────────────┐
+                          │         /monetization-engineer          │
+                          │      orchestrator — routes the chain    │
+                          └────────────────┬────────────────────────┘
+                                           │
+                    ┌──────────────────────────────────────────────┐
+                    │                 THE CHAIN                    │
+                    │                                              │
+                    │  /meter-design          → METER.md           │
+                    │       │  what do we count?                   │
+                    │       ▼                                      │
+                    │  /pricing-model         → PLAN.md            │
+                    │       │  what do we charge?                  │
+                    │       ▼                                      │
+                    │  /entitlement-enforcement → ENFORCEMENT.md   │
+                    │       │  what do we allow or deny?           │
+                    │       ▼                                      │
+                    │  /credit-ledger         → CREDITS.md         │
+                    │       │  how do prepaid credits work?        │
+                    │       ▼                                      │
+                    │  /reconciliation        → RECONCILIATION.md  │
+                    │       │  did we bill what we consumed?       │
+                    │       ▼                                      │
+                    │  /provider-integration  → INTEGRATION.md     │
+                    │          how does this sync to Stripe?       │
+                    │                                              │
+                    └──────────────────────────────────────────────┘
+                                           │
+                          ┌────────────────▼────────────────────────┐
+                          │        .claude/artifacts/               │
+                          │                                         │
+                          │  Your billing design lives here.        │
+                          │  6 markdown files, one per skill.       │
+                          │  Each skill reads upstream artifacts    │
+                          │  so every decision has full context.    │
+                          │                                         │
+                          │  This folder doesn't ship with the      │
+                          │  repo — it's created the first time     │
+                          │  you run a skill.                       │
+                          └─────────────────────────────────────────┘
 ```
 
-The artifacts are the actual billing design for your product — structured YAML-in-markdown that captures the billing unit, pricing rules, enforcement policy, credit system, reconciliation checks, and provider sync. They accumulate as you work through the chain, so each skill has the full context of what was decided upstream.
+Each artifact is structured YAML-in-markdown: billing units, pricing rules, enforcement policy, credit pools, reconciliation checks, provider sync. They accumulate as you work through the chain.
 
-The `artifacts/` folder doesn't ship with the repo. It's created on disk the first time you run a skill. Think of the skills as the engineering process; the artifacts are the output.
-
-When a skill hits a judgment call (hard vs soft limit, billing unit granularity, pricing model choice), it stops and surfaces the tradeoff. Decisions are made by you, not silently resolved.
+When a skill hits a judgment call (hard vs soft limit, billing unit, pricing model, overage behavior), it **stops and surfaces the tradeoff**. Decisions are made by you, not silently resolved.
 
 ## Inspired By
 
