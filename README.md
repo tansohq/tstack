@@ -12,9 +12,10 @@ tstack designs usage-based monetization systems for SaaS products. It's entitlem
 | `/meter-design` | Define billing units, aggregation windows, and measurement points |
 | `/pricing-model` | Structure plan tiers, feature packaging, and price points |
 | `/entitlement-enforcement` | Design access control — allow/deny logic, hard/soft limits, grace periods |
-| `/credit-ledger` | Design prepaid credit pools, grants, drawdown, and expiry |
-| `/reconciliation` | Ensure metered usage matches billed amounts — true-up and drift detection |
-| `/provider-integration` | Map the billing design to Stripe (or other providers) — subscriptions, invoices, usage records |
+| `/credit-ledger` | Design prepaid credit pools, grants, drawdown, and expiry. Credit model taxonomy, CS operations |
+| `/account-hierarchy` | Parent/child accounts, per-API-key credit budgets, reseller models, credit allocation cascading |
+| `/reconciliation` | Ensure metered usage matches billed amounts — true-up, drift detection, rounding checks |
+| `/provider-integration` | Map the billing design to Stripe (or other providers) — subscriptions, invoices, usage records, contract lifecycle |
 
 ## Install
 
@@ -57,6 +58,9 @@ Run `/monetization-engineer` to start. It walks you through the chain, one skill
                     │  /credit-ledger         → CREDITS.md         │
                     │       │  how do prepaid credits work?        │
                     │       ▼                                      │
+                    │  /account-hierarchy     → HIERARCHY.md       │
+                    │       │  who can spend what? [optional]      │
+                    │       ▼                                      │
                     │  /reconciliation        → RECONCILIATION.md  │
                     │       │  did we bill what we consumed?       │
                     │       ▼                                      │
@@ -69,7 +73,7 @@ Run `/monetization-engineer` to start. It walks you through the chain, one skill
                           │        .claude/artifacts/               │
                           │                                         │
                           │  Your billing design lives here.        │
-                          │  6 markdown files, one per skill.       │
+                          │  Up to 7 markdown files, one per skill. │
                           │  Each skill reads upstream artifacts    │
                           │  so every decision has full context.    │
                           │                                         │
