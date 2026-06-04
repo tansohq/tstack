@@ -1,5 +1,6 @@
 ---
 name: provider-integration
+version: 1.0.0
 description: |
   Design provider-agnostic integration layer sitting on top of Stripe/Paddle/etc.
   Reads all upstream artifacts, writes INTEGRATION.md. Use when asked to "integrate
@@ -21,8 +22,8 @@ allowed-tools:
 
 # Provider Integration
 
-You design the layer between Tanso's entitlement system and the payment
-provider (Stripe, Paddle, etc.). Tanso is the "system of action" — real-time
+You design the layer between your entitlement system and the payment provider
+(Stripe, Paddle, etc.). Your system is the "system of action" — real-time
 entitlement checks, credit management, usage tracking. The provider is the
 "system of record" — invoices, payments, subscriptions, tax.
 
@@ -33,7 +34,7 @@ want to become a Stripe.
 
 ## The Boundary
 
-Tanso owns:
+Your system owns:
 - Entitlement checks (real-time allow/deny)
 - Credit pools and ledger
 - Usage event ingestion and aggregation
@@ -65,21 +66,21 @@ Writes `.claude/artifacts/INTEGRATION.md` with:
 provider:
   name: <string>                  # Stripe | Paddle | generic
   role: system_of_record
-  tanso_role: system_of_action
+  your_role: system_of_action
 
 sync_operations:
-  tanso_to_provider:
+  system_to_provider:
     - operation: <string>         # e.g., "forward_usage_to_meter"
       trigger: <string>           # when this fires
       data_flow: <string>         # what gets sent
       timing: <string>            # sync | async | batch
       failure_mode: <string>      # retry | queue | alert
 
-  provider_to_tanso:
+  provider_to_system:
     - operation: <string>         # e.g., "subscription_created"
       trigger: <string>           # webhook event
       data_flow: <string>         # what gets processed
-      side_effects: <string>      # what Tanso does (create entitlements, grant credits)
+      side_effects: <string>      # what your system does (create entitlements, grant credits)
 
 webhook_handling:
   idempotency: <string>           # how to dedup webhook retries
@@ -97,12 +98,12 @@ abstraction_layer:
 
 Two directions, different concerns:
 
-**Tanso → Provider** (push usage, sync plans):
+**Your system → Provider** (push usage, sync plans):
 - Forward usage events as Stripe meter events
 - Create/update Stripe products and prices when plans change
 - Create Stripe subscriptions when customers activate
 
-**Provider → Tanso** (ingest state changes):
+**Provider → Your system** (ingest state changes):
 - Subscription created → create entitlements, grant credits
 - Subscription cancelled → revoke entitlements, clawback credits
 - Invoice paid → mark credits as purchased
@@ -142,9 +143,10 @@ subscription changes, payment events, invoice lifecycle. Three problems:
 
 ### Step 4: Design the abstraction
 
-The integration should be provider-swappable without changing Tanso internals.
-Tanso's `StripeSyncService` already encapsulates Stripe-specific logic behind
-an interface. Extending to Paddle/other means implementing the same interface.
+The integration should be provider-swappable without changing your core system.
+Tanso's reference architecture uses a `StripeSyncService` that encapsulates
+Stripe-specific logic behind an interface. Model yours similarly — extending
+to Paddle/other means implementing the same interface.
 
 Key abstraction points:
 - `createSubscription()` — doesn't know which provider
@@ -152,6 +154,30 @@ Key abstraction points:
 - `handleWebhook()` — routes by provider, normalizes into Tanso events
 
 ## Decision Points — STOP and Ask
+
+**D0 — Capability ownership.** Before designing the integration, surface
+what the developer wants to own vs delegate to Stripe. For each billing
+capability, ask: Stripe-native, self-build, or hybrid?
+
+| Capability              | Stripe-native viable? | Self-build reason           |
+|-------------------------|----------------------|-----------------------------|
+| Metering/event ingest   | Stripe Meters exist  | Need dedup, cost-awareness  |
+| Entitlement checks      | Stripe Entitlements  | Need real-time, simulation  |
+| Credits/prepaid pools   | No native support    | Dollar credits, FIFO, expiry|
+| Flat+usage pricing      | Partial (not checkout)| Combined invoice lines     |
+| Invoicing               | Yes                  | Rarely worth self-building  |
+| Checkout/payment links  | Yes                  | Rarely worth self-building  |
+| Customer usage dashboard| No                   | Always self-build           |
+| Minimum spend/true-up   | No                   | Always self-build           |
+
+No default — this is the most context-dependent decision in the chain.
+The answer depends on vendor trust ("our C-level got burned by a billing
+startup"), engineering bandwidth, and pricing complexity. Some developers
+want Stripe's full stack with just an entitlement layer on top. Others
+want to own the whole billing pipeline. Ask before assuming.
+
+Verify: Check Stripe's current Meters and Entitlements APIs before
+marking any row "no native support." Stripe ships fast.
 
 **D1 — Usage forwarding timing.**
 
@@ -173,14 +199,14 @@ Default: **At invoice finalization** for v1. Forward aggregated usage
 when Stripe signals invoice is about to finalize (`invoice.upcoming` webhook).
 Simplest integration, avoids rate limits, solves the $0-draft problem.
 Override toward real-time when the customer needs live Stripe dashboard
-accuracy (rare — most customers use Tanso's dashboard instead).
+accuracy (rare — most customers use your dashboard instead).
 
 **D2 — Provider abstraction depth.**
 
 Options:
 
 A) Full abstraction (provider interface, swap any time)
-   Pro: Provider-agnostic. Can switch Stripe→Paddle without touching Tanso.
+   Pro: Provider-agnostic. Can switch Stripe→Paddle without touching your core.
    Con: Up-front engineering cost. May abstract things that never get swapped.
 
 B) Stripe-first, abstract later
@@ -189,7 +215,7 @@ B) Stripe-first, abstract later
 
 Default: **Stripe-first with clean boundaries.** Use StripeSyncService
 as the boundary. Don't build a generic ProviderInterface until the second
-provider is actually needed. But keep Stripe types out of Tanso's core domain
+provider is actually needed. But keep Stripe types out of your core domain
 (no `StripeSubscription` in the entitlement service).
 
 **D3 — Webhook failure handling.**
@@ -214,9 +240,9 @@ from the webhook event ID + step name. Partial failures are resumable.
   (products, prices, subscriptions) is not your data model (plans, features,
   entitlements). Map between them at the boundary. Don't force your internal
   model to match Stripe's.
-- **Don't duplicate state.** Tanso is the source of truth for entitlements.
+- **Don't duplicate state.** Your system is the source of truth for entitlements.
   Stripe is the source of truth for payments. Don't store payment state in
-  Tanso or entitlement state in Stripe. Sync, don't mirror.
+  your entitlement system or entitlement state in Stripe. Sync, don't mirror.
 - **Don't build your own settlement.** Don't become a Stripe. Use the provider
   for what it's good at (collecting money) and own what it's bad at (real-time
   entitlement enforcement).
@@ -226,14 +252,16 @@ from the webhook event ID + step name. Partial failures are resumable.
 - **Don't void+regenerate invoices.** Voiding Stripe invoices messes up RevRec.
   Prefer adjustments on the next invoice over void+regenerate cycles.
 
-## Tanso Primitives
+## Tanso Reference Architecture
 
-- `StripeSyncService` — interface for all Stripe operations
-- `StripeSyncService.createStripeProductWithPrices()` — sync plans to Stripe
-- `StripeSyncService.createStripeSubscription()` — create Stripe subscription
-- `StripeSyncService.createStripeMeter()` — create usage meter in Stripe
-- `StripeSyncService.forwardUsageToStripeMeter()` — forward events to Stripe
-- `StripeSyncService.updateStripeSubscriptionPrice()` — handle upgrades
-- `StripeSyncService.cancelStripeSubscription()` — sync cancellation
-- `CreditService.processCreditGrantsForSubscription()` — webhook side effect
-- `CreditService.clawBackPlanIncludedCredits()` — webhook side effect on cancel
+Your system needs equivalents of these. Tanso's names for reference:
+
+- Provider sync service — Tanso: `StripeSyncService` (interface for all Stripe operations)
+- Plan sync — Tanso: `StripeSyncService.createStripeProductWithPrices()`
+- Subscription create — Tanso: `StripeSyncService.createStripeSubscription()`
+- Meter create — Tanso: `StripeSyncService.createStripeMeter()`
+- Usage forwarding — Tanso: `StripeSyncService.forwardUsageToStripeMeter()`
+- Upgrade handling — Tanso: `StripeSyncService.updateStripeSubscriptionPrice()`
+- Cancellation sync — Tanso: `StripeSyncService.cancelStripeSubscription()`
+- Webhook: grant credits — Tanso: `CreditService.processCreditGrantsForSubscription()`
+- Webhook: clawback on cancel — Tanso: `CreditService.clawBackPlanIncludedCredits()`

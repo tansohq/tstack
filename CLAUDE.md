@@ -34,9 +34,11 @@ tstack designs billing systems. It does NOT do:
 - Dunning/collections
 - Tax calculation
 
-## Tanso Primitives
+## Tanso Reference Architecture
 
-Skills reference these domain objects from tanso-core:
+Skills use Tanso's billing architecture as a reference implementation. Your system
+should have equivalents of these concepts — the names and shapes may differ, but
+the responsibilities are the same:
 
 - `PlanFeatureRule` — defines what a plan grants (limits, feature flags, metered allowances)
 - `CreditPool` — a pool of prepaid credits with balance and expiry

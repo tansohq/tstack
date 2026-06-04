@@ -1,5 +1,6 @@
 ---
 name: pricing-model
+version: 1.0.0
 description: |
   Design PlanFeatureRules for a usage-based product. Reads METER.md, writes
   PLAN.md with plan tiers, pricing models (usage/graduated), flat+usage hybrids,
@@ -45,7 +46,7 @@ can't represent it. Had to build a custom PLG UI just to show the price
 correctly.
 
 **B2B2G (government procurement):** "Graduated tiers + per-unit pricing + plan
-feature rules." Tanso covers this out of the box. But volatile usage
+feature rules." Tanso's architecture covers this pattern. But volatile usage
 ("sometimes not enough transactions") means the pricing model needs a floor.
 
 ## Inputs
@@ -187,25 +188,34 @@ These are the primary levers for competitive response, value extraction, and
 correcting mistakes. Know which dial you're turning. Adjusting credits-per-action
 is a scalpel; adjusting price-per-credit is a megaphone.
 
-Use the decision format:
+**D7 — Minimum committed spend.** Does the customer prepay an annual
+floor that usage draws down against?
 
-```
-D<N> — <one-line question>
-
-What's at stake: <one sentence>
+What's at stake: This is a different billing primitive than monthly
+usage. The annual commit is a credit pool. Monthly usage DEDUCTs from
+it. Year-end reconciliation bills the remainder if usage fell short.
+Get the under/over behavior wrong and you either eat revenue or
+surprise the customer.
 
 Options:
 
-A) <option>
-   Pro: <concrete>
-   Con: <concrete>
+A) Floor-only (customer owes the minimum regardless of usage)
+   Pro: Revenue certainty. Standard enterprise motion.
+   Con: Low-usage customer pays for value not received.
 
-B) <option>
-   Pro: <concrete>
-   Con: <concrete>
+B) Floor + overage at commit rate (usage above commit billed at same
+   per-unit price)
+   Pro: Simple. One rate. Customer understands the math.
+   Con: No volume incentive. Heavy user pays same rate as light user.
 
-My lean: <which and why, OR "no lean">
-```
+C) Floor + overage at premium rate (usage above commit billed higher)
+   Pro: Protects margin on unexpected spikes.
+   Con: Surprise bills on overage. Customer feels penalized for growth.
+
+My lean: A+B for v1. Floor is non-negotiable. Overage at commit rate
+keeps it simple. Map to credit-ledger: the commit = a CreditGrant of
+type PURCHASED with amount = the committed spend. Monthly usage = DEDUCT
+transactions. Year-end reconciliation = check remaining, bill if > 0.
 
 ## Anti-Patterns
 
@@ -223,17 +233,18 @@ My lean: <which and why, OR "no lean">
   at limit. "You get 200 calls. Call 201 costs $0.30." Not "usage-based
   pricing applies after your allocation."
 
-## Tanso Primitives
+## Tanso Reference Architecture
 
-- `PlanFeatureRule` — links Plan to Feature with pricing config
-- `PlanFeatureRule.value.pricing.model` — "usage" | "graduated"
-- `PlanFeatureRule.value.pricing.tiers[]` — {up_to, price_per_unit, flat_fee}
-- `PlanFeatureRule.value.pricing.max_usage` — included units threshold
-- `PlanFeatureRule.value.pricing.cost_per_unit` — simple per-unit price
-- `PlanFeatureRule.value.pricing.reset_mode` — "reset" | "accumulate"
-- `PlanFeatureRule.value.cost.model` — "simple" | "token_pair"
-- `PlanFeatureRule.value.cost.cost_per_unit` — YOUR cost per unit
-- `Plan.priceAmount` — flat subscription price
-- `GraduatedPricingModel` — tier-based pricing with incremental cost calculation
-- `RuleCalculationUtil.extractPricingModel()` — extracts model from rule
-- `PlanCreditAllocation` — credits granted per plan activation
+Your system needs equivalents of these pricing concepts. Tanso's names for reference:
+
+- Plan-feature rule — Tanso: `PlanFeatureRule` (links Plan to Feature with pricing config)
+- Pricing model — Tanso: `PlanFeatureRule.value.pricing.model` ("usage" | "graduated")
+- Graduated tiers — Tanso: `PlanFeatureRule.value.pricing.tiers[]` ({up_to, price_per_unit, flat_fee})
+- Included units — Tanso: `PlanFeatureRule.value.pricing.max_usage`
+- Per-unit price — Tanso: `PlanFeatureRule.value.pricing.cost_per_unit`
+- Reset mode — Tanso: `PlanFeatureRule.value.pricing.reset_mode` ("reset" | "accumulate")
+- Cost model — Tanso: `PlanFeatureRule.value.cost.model` ("simple" | "token_pair")
+- Cost per unit — Tanso: `PlanFeatureRule.value.cost.cost_per_unit` (YOUR cost, not customer price)
+- Base price — Tanso: `Plan.priceAmount` (flat subscription component)
+- Graduated calculation — Tanso: `GraduatedPricingModel` (tier-based incremental cost)
+- Credit allocation — Tanso: `PlanCreditAllocation` (credits granted per plan activation)

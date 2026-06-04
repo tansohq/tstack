@@ -1,5 +1,6 @@
 ---
 name: reconciliation
+version: 1.0.0
 description: |
   Design event-to-invoice tie-out and true-up mechanics. Engineering correctness:
   did we bill what we consumed? Reads all upstream artifacts, writes
@@ -120,7 +121,7 @@ True-ups happen when reality doesn't match what was invoiced. Two directions:
   next invoice.
 
 Common pain: "True-ups are fully manual because Stripe only supports usage
-events, not dollar-based events." Tanso's credit ledger can represent
+events, not dollar-based events." A credit ledger can represent
 dollar-value adjustments natively — this is the differentiator.
 
 ### Step 4: Design audit trail
@@ -206,11 +207,13 @@ fully-auto for low-value adjustments (under $5) and review for high-value.
   consumption velocity changes, not just billing accuracy. Don't confuse
   contract status with product health.
 
-## Tanso Primitives
+## Tanso Reference Architecture
 
-- `CreditTransaction` — eventId, invoiceId, idempotencyKey, balanceBefore/After
-- `CreditTransaction.transactionType` — GRANT/DEDUCT/EXPIRE/REVERSE (audit trail)
-- `CreditGrant.idempotencyKey` — dedup grants from webhook retries
-- `Event` — usageUnits, idempotencyKey, createdAt, featureId, customerId
-- `POST /api/v1/client/events` — X-Idempotency-Key header for event dedup
-- `CreditService.clawBackPlanIncludedCredits()` — reversal mechanism
+Your system needs equivalents of these. Tanso's names for reference:
+
+- Ledger entry — Tanso: `CreditTransaction` (eventId, invoiceId, idempotencyKey, balanceBefore/After)
+- Transaction types — Tanso: GRANT/DEDUCT/EXPIRE/REVERSE (audit trail)
+- Grant dedup — Tanso: `CreditGrant.idempotencyKey` (prevents double-grants from webhook retries)
+- Event record — Tanso: `Event` (usageUnits, idempotencyKey, createdAt, featureId, customerId)
+- Event ingestion — Tanso: `POST /api/v1/client/events` with X-Idempotency-Key header
+- Reversal — Tanso: `CreditService.clawBackPlanIncludedCredits()`

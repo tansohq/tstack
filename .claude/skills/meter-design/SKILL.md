@@ -1,5 +1,6 @@
 ---
 name: meter-design
+version: 1.0.0
 description: |
   Design the billing unit and event schema for a usage-based product. Defines
   what to meter, event shape, aggregation, and reset cadence. Writes METER.md.
@@ -98,7 +99,7 @@ their plan?"
 
 ### Step 2: Design the event shape
 
-Map to Tanso's EventIngestionRequest:
+Your event ingestion needs these fields (modeled on Tanso's EventIngestionRequest):
 - `eventName` — the meter name
 - `usageUnits` — the quantity (1 for count-based, duration/tokens/bytes for measurement)
 - `idempotencyKey` — dedup key (critical: double-counting usage = double-billing)
@@ -122,7 +123,7 @@ This is where founders get it wrong. Three patterns:
 
 ### Step 4: Define reset cadence
 
-Maps to PlanFeatureRule's `reset_mode`:
+Maps to the plan's reset mode (Tanso calls this `PlanFeatureRule.reset_mode`):
 - `reset` — counter resets at period boundary (monthly, annual). Most SaaS.
 - `accumulate` — counter grows forever. Lifetime usage. Rarer but needed for
   prepaid credit pools.
@@ -186,24 +187,50 @@ trivial (misdial, dropped connection, bounced email), STOP. Present:
 - Default: non-billable if the event fails before delivering value
   (bounced email, sub-15-second call). Billable once value delivery starts.
 
+**D7 — Active-entity dedup identity.** When the billing unit is "active
+devices" (or active users, active endpoints), how do you count unique
+entities per billing period?
+
+What's at stake: A device that goes offline and reconnects mid-period
+must count as 1, not 2. Without a dedup key and window, you overcount
+and overbill. IoT devices go on/offline constantly.
+
+Options:
+
+A) Unique by hardware ID per billing period
+   Pro: Simple. One device = one count regardless of reconnections.
+   Con: Requires stable device identifier.
+
+B) Unique by logical identifier (customer-assigned device name/tag)
+   Pro: Survives hardware swaps. Customer controls identity.
+   Con: Customer can game it (reassign names to stay under limit).
+
+C) High-water mark (peak concurrent active in any window within period)
+   Pro: Captures actual infrastructure load.
+   Con: One spike day sets the bill for the whole month.
+
+My lean: A for most IoT. Hardware ID is stable and ungameable. Add a
+"device replacement" flow where the customer can retire an old ID and
+register a new one without double-counting.
+
 Use the decision format from /monetization-engineer:
 
 ```
 D<N> — <one-line question>
 
-What's at stake: <one sentence>
+What's at stake: <one sentence on what breaks if we pick wrong>
 
 Options:
 
-A) <option>
-   Pro: <concrete>
-   Con: <concrete>
+A) <option> 
+   Pro: <concrete observable benefit>
+   Con: <concrete observable cost>
 
 B) <option>
-   Pro: <concrete>
-   Con: <concrete>
+   Pro: <concrete observable benefit>
+   Con: <concrete observable cost>
 
-My lean: <which and why, OR "no lean">
+My lean: <which and why in one sentence, OR "no lean — genuinely depends on your context">
 ```
 
 ## Anti-Patterns
@@ -220,9 +247,11 @@ My lean: <which and why, OR "no lean">
 - **Don't over-meter.** Track what the entitlement check needs. Everything
   else is analytics, not metering.
 
-## Tanso Primitives
+## Tanso Reference Architecture
+
+Your system needs equivalents of these. Tanso's names for reference:
 
 - `EventIngestionRequest` — eventName, usageUnits, idempotencyKey, meta, timestamp
-- `POST /api/v1/client/events` — ingestion endpoint with X-Idempotency-Key header dedup
-- `PlanFeatureRule.value.pricing.reset_mode` — "reset" | "accumulate"
-- `PlanFeatureRule.value.pricing.usage_unit_type` — what units represent
+- Event ingestion endpoint — Tanso: `POST /api/v1/client/events` with X-Idempotency-Key header dedup
+- Plan reset mode — Tanso: `PlanFeatureRule.value.pricing.reset_mode` ("reset" | "accumulate")
+- Usage unit type — Tanso: `PlanFeatureRule.value.pricing.usage_unit_type`

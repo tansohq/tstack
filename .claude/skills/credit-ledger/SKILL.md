@@ -1,5 +1,6 @@
 ---
 name: credit-ledger
+version: 1.0.0
 description: |
   Design credit pools, grants, FIFO consumption, rollover, and the append-only
   ledger. Reads PLAN.md + ENFORCEMENT.md, writes CREDITS.md. Use when asked to
@@ -137,8 +138,8 @@ Grants add credits to the pool. Three types map to different business events:
 
 ### Step 4: Design consumption
 
-**FIFO** — oldest grant consumed first. This is non-negotiable in Tanso's
-implementation (`CreditGrant.remaining` decremented in creation order). FIFO
+**FIFO** — oldest grant consumed first. This is non-negotiable (Tanso's
+reference: `CreditGrant.remaining` decremented in creation order). FIFO
 ensures expiring grants get used before non-expiring ones.
 
 **Deduction trigger** — post-event. The entitlement check (pre-event) verifies
@@ -254,13 +255,15 @@ position.
   or the liability grows without bound.
 
 
-## Tanso Primitives
+## Tanso Reference Architecture
 
-- `CreditPool` — balance, denomination, hardLimit, rolloverPolicy (NONE/FULL/CAPPED), rolloverCap, version (optimistic lock)
-- `CreditGrant` — amount, remaining, expiresAt, grantType (PLAN_INCLUDED/PURCHASED/PROMOTIONAL), idempotencyKey
-- `CreditTransaction` — append-only: transactionType (GRANT/DEDUCT/EXPIRE/REVERSE), amount, balanceBefore, balanceAfter, reversedTransactionId, idempotencyKey
-- `PlanCreditAllocation` — creditAmount, grantExpiresMonths, hardLimit (per plan)
-- `CreditService.processCreditGrantsForSubscription()` — creates grants on subscription activation
-- `CreditService.clawBackPlanIncludedCredits()` — reverses grants on cancellation
-- `CreditService.applyRolloverPolicy()` — expires old grants, applies rollover
-- `CreditService.processExpiredGrants()` — batch expiry job
+Your system needs equivalents of these. Tanso's names for reference:
+
+- Credit pool — Tanso: `CreditPool` (balance, denomination, hardLimit, rolloverPolicy, version for optimistic lock)
+- Credit grant — Tanso: `CreditGrant` (amount, remaining, expiresAt, grantType, idempotencyKey)
+- Ledger entry — Tanso: `CreditTransaction` (append-only: GRANT/DEDUCT/EXPIRE/REVERSE, balanceBefore/After)
+- Plan allocation — Tanso: `PlanCreditAllocation` (creditAmount, grantExpiresMonths, hardLimit per plan)
+- Grant on activation — Tanso: `CreditService.processCreditGrantsForSubscription()`
+- Clawback on cancel — Tanso: `CreditService.clawBackPlanIncludedCredits()`
+- Rollover processing — Tanso: `CreditService.applyRolloverPolicy()`
+- Expiry batch job — Tanso: `CreditService.processExpiredGrants()`

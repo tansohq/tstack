@@ -1,5 +1,6 @@
 ---
 name: entitlement-enforcement
+version: 1.0.0
 description: |
   Design real-time entitlement enforcement: check-before-consume, allow/deny,
   hard/soft limits, simulation, fail-open. Reads PLAN.md, writes ENFORCEMENT.md.
@@ -29,7 +30,7 @@ asks "can my user do this?" and gets an answer in milliseconds.
 One billing platform customer manages entitlements internally via webhooks
 because Stripe can't do this. Stores entitlement state in their own system,
 builds their own customer dashboard, exposes their own API. Would pay $20K/year
-for someone else to do it. That someone is Tanso.
+for someone else to do it. That's the product you're designing.
 
 ## What Makes This Not a Feature Flag
 
@@ -43,10 +44,11 @@ A feature flag is a boolean: on or off. An entitlement check is:
 One prospect called this "pre-transaction cost-aware logic." Another's reaction
 to seeing it: "That's really nice... this is a big problem for SaaS."
 
-The simulation API (`POST /api/v1/client/entitlements` with UsageContext) is
-the demo moment. The customer can dry-run "what if I consume 50 more units?"
-and get back `wouldExceedLimit: true` without burning anything. No other
-billing platform does this at the API layer.
+Your system needs a simulation endpoint (Tanso exposes this as
+`POST /api/v1/client/entitlements` with UsageContext). The customer can
+dry-run "what if I consume 50 more units?" and get back
+`wouldExceedLimit: true` without burning anything. No other billing
+platform does this at the API layer.
 
 ## Inputs
 
@@ -108,8 +110,8 @@ Read PLAN.md. For each feature with a PlanFeatureRule, determine the check type:
 
 ### Step 2: Define the check sequence
 
-The entitlement check evaluates in order. Tanso's existing implementation
-(`ClientEntitlementServiceImpl.checkEntitlement()`) follows this sequence:
+The entitlement check evaluates in order. Tanso's reference implementation
+(its `ClientEntitlementServiceImpl.checkEntitlement()`) follows this sequence:
 
 1. **Revocation check** — is the entitlement revoked? (instant deny)
 2. **Usage limit check** — has cumulative usage exceeded max_usage?
@@ -181,7 +183,7 @@ implications (access to PII, regulated actions). Then fail-closed.
 
 ### Step 4: Design the simulation response
 
-Map to Tanso's EntitlementResponse:
+Your entitlement response should include these fields (modeled on Tanso's EntitlementResponse):
 
 ```
 {
@@ -217,16 +219,16 @@ Where in the customer's flow does the check happen?
 - **Pre-event** (most common): Check BEFORE the action. "Can this customer
   do this?" → yes/no. If no, don't start. If yes, proceed and record the
   event on completion.
-  Maps to: `GET /api/v1/client/entitlements/{customerId}/{featureKey}`
+  Tanso: `GET /api/v1/client/entitlements/{customerId}/{featureKey}`
 
 - **Post-event with simulation**: Check BEFORE, but with a simulated usage
   amount. "If I consume 50 more units, will I exceed?" → `wouldExceedLimit`.
-  Maps to: `POST /api/v1/client/entitlements` with UsageContext
+  Tanso: `POST /api/v1/client/entitlements` with UsageContext
 
 - **Pre + post**: Check before to gate, record after to track. The
   entitlement check at pre-event uses `usageUnits: 0` (audit only). The
   event ingestion at post-event uses actual units.
-  Maps to: GET (pre) + POST /api/v1/client/events (post)
+  Tanso: GET (pre) + POST /api/v1/client/events (post)
 
 ## Decision Points — STOP and Ask
 
@@ -267,14 +269,16 @@ fine. This constrains the enforcement architecture (caching, read replicas).
   batch will exceed — and guessing wrong means either a blocked job or a
   surprise bill.
 
-## Tanso Primitives
+## Tanso Reference Architecture
 
-- `POST /api/v1/client/entitlements` — check + simulate (with UsageContext)
-- `GET /api/v1/client/entitlements/{customerId}/{featureKey}` — check only
-- `EntitlementEvaluationRequest` — customerReferenceId, featureKey, UsageContext
-- `EntitlementResponse` — isAllowed, usage (used/limit/remaining), simulation (wouldExceedLimit), credit (balance/hardLimit)
-- `UsageContext` — eventName, usageUnits (for simulation), meta
-- `ClientEntitlementServiceImpl.checkEntitlement()` — evaluation sequence: revocation → usage → credit → simulation
-- `RuleCalculationUtil.isMaxUsageExceeded()` — limit check logic
-- `PlanFeatureRule.value.pricing.max_usage` — the included-units limit
-- `CreditPool.hardLimit` — zero-balance blocks access when true
+Your system needs equivalents of these. Tanso's names for reference:
+
+- Check + simulate endpoint — Tanso: `POST /api/v1/client/entitlements` (with UsageContext)
+- Check-only endpoint — Tanso: `GET /api/v1/client/entitlements/{customerId}/{featureKey}`
+- Evaluation request — Tanso: `EntitlementEvaluationRequest` (customerReferenceId, featureKey, UsageContext)
+- Evaluation response — Tanso: `EntitlementResponse` (isAllowed, usage, simulation, credit)
+- Simulation context — Tanso: `UsageContext` (eventName, usageUnits, meta)
+- Evaluation sequence — Tanso: `ClientEntitlementServiceImpl.checkEntitlement()` (revocation -> usage -> credit -> simulation)
+- Limit check — Tanso: `RuleCalculationUtil.isMaxUsageExceeded()`
+- Included units — Tanso: `PlanFeatureRule.value.pricing.max_usage`
+- Hard limit flag — Tanso: `CreditPool.hardLimit` (zero-balance blocks access when true)
