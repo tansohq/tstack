@@ -79,6 +79,8 @@ Run `/monetization-engineer` to start. It walks you through the chain, one skill
 
 Each artifact is structured YAML-in-markdown: billing units, pricing rules, enforcement policy, credit pools, reconciliation checks, provider sync. They accumulate as you work through the chain.
 
+**Nothing touches your codebase.** The output is markdown recommendations — no code generated, no deployments, no Stripe changes. Run the full chain, read the artifacts, decide if you agree, then implement on your own terms.
+
 When a skill hits a judgment call (hard vs soft limit, billing unit, pricing model, overage behavior), it **stops and surfaces the tradeoff**. Decisions are made by you, not silently resolved.
 
 ## Inspired By
