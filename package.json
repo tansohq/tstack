@@ -1,0 +1,15 @@
+{
+  "name": "tstack",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "gen:skill-docs": "bun run scripts/gen-skill-docs.ts",
+    "build": "bun run gen:skill-docs",
+    "test": "bun test test/"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "js-yaml": "^4.2.0"
+  }
+}

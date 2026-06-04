@@ -1,0 +1,246 @@
+---
+name: pricing-model
+version: 1.0.0
+description: |
+  Design PlanFeatureRules for a usage-based product. Reads METER.md, writes
+  PLAN.md with plan tiers, pricing models (usage/graduated), flat+usage hybrids,
+  cost models, and margin targets. Use when asked to "design pricing", "plan
+  tiers", "pricing model", or "how much should we charge".
+triggers:
+  - design pricing
+  - plan tiers
+  - pricing model
+  - how much should we charge
+  - flat plus usage
+allowed-tools:
+{{ALLOWED_TOOLS_STANDARD}}
+---
+
+# Pricing Model
+
+You design the PlanFeatureRules. You read METER.md to understand what's being
+counted and what it costs, then build plan tiers that translate metered usage
+into money.
+
+## Why This Skill Exists
+
+Every prospect has the same gap: they know their cost structure and they know
+roughly what customers should pay, but the mapping between "events consumed"
+and "invoice line item" is unbuilt. That mapping is PlanFeatureRule.
+
+Real examples of the gap:
+
+**Voice AI (per-call billing):** "Monthly minimum ($50 flat) + per-call overage
+or graduated tiering (e.g., 100-200 calls per-call)." The founder knows the
+shape but not the tiers. And a cost stack of telephony + LLM + compute means
+the margin per call varies by duration and model — pricing must account for
+that or they bleed on long calls.
+
+**Billing platform (IoT devices):** "Stripe checkout can't combine flat + usage
+fees." The pricing model exists in the founder's head but Stripe's data model
+can't represent it. Had to build a custom PLG UI just to show the price
+correctly.
+
+**B2B2G (government procurement):** "Graduated tiers + per-unit pricing + plan
+feature rules." Tanso's architecture covers this pattern. But volatile usage
+("sometimes not enough transactions") means the pricing model needs a floor.
+
+## Inputs
+
+Reads `.claude/artifacts/METER.md` — billing unit, events, cost streams,
+aggregation, reset mode.
+
+## Outputs
+
+Writes `.claude/artifacts/PLAN.md` with:
+
+```yaml
+plans:
+  - key: <string>             # plan identifier (e.g., "starter", "growth")
+    name: <string>
+    base_price:               # flat component
+      amount: <number>
+      currency: <string>
+      interval: <string>      # monthly | annual
+    features:
+      - feature_key: <string>
+        enabled: <boolean>
+        rule:
+          pricing:
+            model: <string>   # usage | graduated
+            usage_unit_type: <string>  # from METER.md billing_unit
+            reset_mode: <string>       # from METER.md aggregation
+            max_usage: <number|null>   # included units (null = unlimited)
+            cost_per_unit: <number>    # for simple usage model
+            tiers:                     # for graduated model
+              - up_to: <number|"inf">
+                price_per_unit: <number>
+                flat_fee: <number|null>
+          cost:
+            model: <string>   # simple | token_pair | composite
+            cost_per_unit: <number>    # YOUR cost, not customer price
+            cost_streams:              # from METER.md
+              - name: <string>
+                cost_per_unit: <number>
+                unit: <string>
+
+margin_analysis:
+  target_margin: <number>     # percentage
+  break_even_usage: <number>  # usage level where base_price covers cost
+  margin_risk: <string>       # what usage pattern erodes margin
+
+credit_model:                 # if credits apply (null if pure usage)
+  denomination: <string>
+  included_per_plan:
+    - plan_key: <string>
+      amount: <number>
+      grant_type: PLAN_INCLUDED
+  hard_limit: <boolean|null>  # surfaced as decision — not resolved here
+```
+
+## How You Work
+
+### Step 1: Read METER.md
+
+Load the billing unit, cost streams, and aggregation. If METER.md doesn't
+exist, STOP — tell the user to run /meter-design first.
+
+### Step 2: Identify the pricing shape
+
+Three patterns, not mutually exclusive:
+
+**Pure usage** — every unit costs the same. Simple, transparent, but no revenue
+floor. Works when usage is predictable and cost-per-unit is stable.
+Maps to: `PlanFeatureRule.value.pricing.model = "usage"` with `cost_per_unit`.
+
+**Graduated** — price per unit changes at thresholds. Rewards volume, protects
+margin on low-usage customers. Works when cost-per-unit decreases at scale.
+Maps to: `PlanFeatureRule.value.pricing.model = "graduated"` with `tiers[]`.
+
+**Flat + usage hybrid** — base subscription covers N included units, overage
+billed per-unit or graduated. Most common for B2B SaaS. The flat component
+provides revenue predictability; usage captures value from heavy users.
+Maps to: Plan.priceAmount (flat) + PlanFeatureRule with `max_usage` as the
+included threshold, overage priced via `cost_per_unit` or `tiers[]`.
+
+### Step 3: Map cost to price
+
+For each feature rule, ensure price > cost at the expected usage level:
+
+- Pull cost_per_unit from METER.md cost streams
+- For compound cost (multiple streams), sum to get total cost per billing unit
+- Set price to achieve target margin
+- Flag where margin is variable (e.g., LLM token cost varies by call length)
+
+### Step 4: Design plan tiers
+
+Most products need 2-4 tiers. For each tier:
+- What's included in the base price (max_usage)
+- What's the overage rate
+- Which features are enabled vs gated
+
+### Step 5: Surface decisions
+
+## Decision Points — STOP and Ask
+
+**D1 — Pricing model choice.** Usage vs graduated vs hybrid. This is THE
+founder decision. Present all three with margin implications for their
+specific cost structure. Never pick one silently.
+
+**D2 — Tier boundaries.** Where do plan tiers split? "Starter gets 100 calls,
+Growth gets 500" — these numbers are business decisions, not engineering ones.
+Present options based on the cost break-even point.
+
+**D3 — Flat + usage split.** For hybrid models: how much revenue comes from
+the flat fee vs usage? Higher flat = more predictable revenue but less
+usage-correlated pricing. Present the tradeoff with break-even analysis.
+
+**D4 — Margin target.** What gross margin does the founder want? 60%? 80%?
+This determines the price-to-cost multiplier. If they don't know, present
+the cost structure and ask "what's the minimum margin you'd accept?"
+
+**D5 — Credit denomination.** If the product uses credits instead of direct
+unit pricing: what's the exchange rate? 1 credit = 1 call? 1 credit = 1
+minute? Credits add a translation layer — only use them when the billing unit
+is too variable to price directly (e.g., LLM tokens with different models
+at different costs).
+
+**D6 — Which dial are you turning?** Credit pricing has two adjustment levers,
+and they behave completely differently:
+
+- **Price per credit** (visible to customer): Changes everything. Announces a
+  "price change." Customers notice, compare to old pricing, may churn. Use for
+  broad repricing events, competitive repositioning, or when you need to
+  communicate that value has changed.
+
+- **Credits per action** (less visible): Changes specific actions without
+  announcing a price change. "Image generation now costs 3 credits instead of 2"
+  is invisible pricing surgery — the credit price didn't change, the weight did.
+  Use for correcting cost mismatches on individual actions, responding to cost
+  changes in your supply chain (LLM price drops), or extracting more value from
+  high-value actions without a pricing event.
+
+These are the primary levers for competitive response, value extraction, and
+correcting mistakes. Know which dial you're turning. Adjusting credits-per-action
+is a scalpel; adjusting price-per-credit is a megaphone.
+
+**D7 — Minimum committed spend.** Does the customer prepay an annual
+floor that usage draws down against?
+
+What's at stake: This is a different billing primitive than monthly
+usage. The annual commit is a credit pool. Monthly usage DEDUCTs from
+it. Year-end reconciliation bills the remainder if usage fell short.
+Get the under/over behavior wrong and you either eat revenue or
+surprise the customer.
+
+Options:
+
+A) Floor-only (customer owes the minimum regardless of usage)
+   Pro: Revenue certainty. Standard enterprise motion.
+   Con: Low-usage customer pays for value not received.
+
+B) Floor + overage at commit rate (usage above commit billed at same
+   per-unit price)
+   Pro: Simple. One rate. Customer understands the math.
+   Con: No volume incentive. Heavy user pays same rate as light user.
+
+C) Floor + overage at premium rate (usage above commit billed higher)
+   Pro: Protects margin on unexpected spikes.
+   Con: Surprise bills on overage. Customer feels penalized for growth.
+
+My lean: A+B for v1. Floor is non-negotiable. Overage at commit rate
+keeps it simple. Map to credit-ledger: the commit = a CreditGrant of
+type PURCHASED with amount = the committed spend. Monthly usage = DEDUCT
+transactions. Year-end reconciliation = check remaining, bill if > 0.
+
+## Anti-Patterns
+
+- **Don't price without cost.** If METER.md has no cost streams, push back.
+  Pricing without cost awareness is guessing at margin.
+- **Don't over-tier.** 2-3 tiers cover 90% of B2B products. A 5-tier matrix
+  is a sales tax, not a pricing model.
+- **Don't default to credits.** Credits add cognitive overhead for the customer.
+  Use direct pricing (per-call, per-request) unless the billing unit's cost
+  genuinely varies too much to price directly.
+- **Don't ignore the floor.** Volatile-usage products ("sometimes not enough
+  transactions") need a base price or minimum commit. Pure usage with no
+  floor = unpredictable revenue.
+- **Don't forget overage clarity.** The customer must understand what happens
+  at limit. "You get 200 calls. Call 201 costs $0.30." Not "usage-based
+  pricing applies after your allocation."
+
+## Tanso Reference Architecture
+
+Your system needs equivalents of these pricing concepts. Tanso's names for reference:
+
+- Plan-feature rule — Tanso: `PlanFeatureRule` (links Plan to Feature with pricing config)
+- Pricing model — Tanso: `PlanFeatureRule.value.pricing.model` ("usage" | "graduated")
+- Graduated tiers — Tanso: `PlanFeatureRule.value.pricing.tiers[]` ({up_to, price_per_unit, flat_fee})
+- Included units — Tanso: `PlanFeatureRule.value.pricing.max_usage`
+- Per-unit price — Tanso: `PlanFeatureRule.value.pricing.cost_per_unit`
+- Reset mode — Tanso: `PlanFeatureRule.value.pricing.reset_mode` ("reset" | "accumulate")
+- Cost model — Tanso: `PlanFeatureRule.value.cost.model` ("simple" | "token_pair")
+- Cost per unit — Tanso: `PlanFeatureRule.value.cost.cost_per_unit` (YOUR cost, not customer price)
+- Base price — Tanso: `Plan.priceAmount` (flat subscription component)
+- Graduated calculation — Tanso: `GraduatedPricingModel` (tier-based incremental cost)
+- Credit allocation — Tanso: `PlanCreditAllocation` (credits granted per plan activation)

@@ -1,0 +1,215 @@
+---
+name: reconciliation
+version: 1.0.0
+description: |
+  Design event-to-invoice tie-out and true-up mechanics. Engineering correctness:
+  did we bill what we consumed? Reads all upstream artifacts, writes
+  RECONCILIATION.md. Use when asked to "reconcile", "true-up", "billing
+  accuracy", or "event to invoice".
+triggers:
+  - reconcile
+  - true-up
+  - billing accuracy
+  - event to invoice
+  - usage reconciliation
+allowed-tools:
+{{ALLOWED_TOOLS_STANDARD}}
+---
+
+# Reconciliation
+
+You design the tie-out between events consumed and money charged. Engineering
+correctness: every event that decremented an entitlement should map to a line
+item on an invoice. Every credit deduction should have a corresponding event.
+If these don't match, something is wrong.
+
+This is NOT rev-ops reporting. Not MRR dashboards. Not churn prediction.
+Billing platform operators explicitly advise against building that layer — it's
+a tar pit. This skill handles one question: **did we bill correctly?**
+
+## Why This Is Hard
+
+Common pain with Stripe: "Usage-based invoicing is broken: invoices are created
+at $0 draft before usage data is finalized, then updated on finalization. Hard
+to confirm accuracy; sometimes requires void + regenerate."
+
+The problem is timing. Events arrive continuously. Invoices are periodic.
+Between the event and the invoice, things can go wrong:
+- Events double-counted (idempotency failure)
+- Events missed (ingestion failure, customer didn't send)
+- Credit deductions don't match events (concurrency race)
+- Invoice amounts don't match sum of events (rounding, timezone boundary)
+- True-up needed for soft-limit overage
+
+## Inputs
+
+Reads all upstream artifacts:
+- `.claude/artifacts/METER.md` — event shape, idempotency
+- `.claude/artifacts/PLAN.md` — pricing rules, what each event should cost
+- `.claude/artifacts/ENFORCEMENT.md` — soft limit overage rules
+- `.claude/artifacts/CREDITS.md` — ledger, grants, deductions
+
+## Outputs
+
+Writes `.claude/artifacts/RECONCILIATION.md` with:
+
+```yaml
+reconciliation:
+  cadence: <string>              # per-invoice | daily | real-time
+  source_of_truth: <string>      # event_log | credit_ledger | both
+  tie_out_method: <string>       # sum_events_vs_invoice | ledger_replay
+
+checks:
+  - name: <string>
+    description: <string>
+    source_a: <string>           # what to compare
+    source_b: <string>           # against what
+    tolerance: <string>          # exact | within_N_cents | within_N_percent
+    on_mismatch: <string>        # alert | auto_correct | flag_for_review
+
+true_up:
+  trigger: <string>              # end_of_period | threshold_exceeded | manual
+  direction: <string>            # customer_owes | we_owe | either
+  mechanism: <string>            # adjust_next_invoice | issue_credit | one_time_charge
+  automation: <string>           # fully_auto | review_then_apply | manual
+
+idempotency_audit:
+  check_for: <string>            # duplicate_events | missing_events | orphan_transactions
+  detection_method: <string>
+  resolution: <string>
+```
+
+## How You Work
+
+### Step 1: Identify reconciliation scope
+
+What needs to match what? Three layers:
+
+1. **Events ↔ Entitlement decrements**: Every `POST /events` that recorded
+   usageUnits should have caused the entitlement's `used` counter to increment.
+   If they diverge, events were lost or double-counted.
+
+2. **Events ↔ Credit deductions** (if credit-backed): Every event that incurred
+   cost should have a matching `CreditTransaction` of type DEDUCT. The
+   `CreditTransaction.eventId` links them. If an event has no deduction, cost
+   was eaten. If a deduction has no event, credits were stolen.
+
+3. **Aggregated events ↔ Invoice line items**: Sum of events in the billing
+   period × price per unit should equal the invoice amount. If not, either
+   pricing was applied wrong or events were miscounted.
+
+### Step 2: Design the tie-out checks
+
+For each layer, define:
+- What's being compared (source A vs source B)
+- What tolerance is acceptable (exact match? within rounding?)
+- What happens on mismatch (alert, auto-correct, flag)
+
+### Step 3: Design true-up mechanics
+
+True-ups happen when reality doesn't match what was invoiced. Two directions:
+
+- **Customer owes more**: Soft-limit overage, events arrived after invoice
+  finalized, credit adjustments. Mechanism: charge on next invoice or
+  one-time overage charge.
+- **We owe customer**: Double-charged events, granted credits that weren't
+  applied, service outage credits. Mechanism: credit memo or adjustment on
+  next invoice.
+
+Common pain: "True-ups are fully manual because Stripe only supports usage
+events, not dollar-based events." A credit ledger can represent
+dollar-value adjustments natively — this is the differentiator.
+
+### Step 4: Design audit trail
+
+The append-only credit ledger IS the audit trail. You can replay it to verify
+any balance at any point. But the event log needs the same property — events
+should be immutable, timestamped, and idempotency-keyed.
+
+## Decision Points — STOP and Ask
+
+**D1 — Reconciliation cadence.**
+
+Options:
+
+A) Per-invoice (check when invoice is generated)
+   Pro: Catches errors before they reach the customer.
+   Con: Errors accumulate until invoice time. Late detection.
+
+B) Daily batch
+   Pro: Catches drift within 24 hours. Manageable alert volume.
+   Con: Adds operational overhead. Needs infrastructure.
+
+C) Real-time (on every event)
+   Pro: Immediate detection. No drift accumulates.
+   Con: Expensive. Most events reconcile fine — noise-to-signal ratio.
+
+Default: **Per-invoice** for v1. Check accuracy at invoice generation
+time. Add daily batch when scale warrants it. Real-time is over-engineering
+for most early-stage products. Override when the product has high-value
+individual events (each event = large dollar amount) where catching a single
+error immediately matters.
+
+**D2 — Mismatch tolerance.**
+
+What's at stake: Too tight = false positives from rounding. Too loose = real
+errors slip through.
+
+Default: Exact match for event counts. Within $0.01 for dollar amounts
+(floating-point rounding). Flag anything beyond that for review.
+
+**D3 — True-up automation.**
+
+Options:
+
+A) Fully automated (system adjusts next invoice)
+   Pro: No manual work. Scales.
+   Con: Automated adjustments can surprise customers.
+
+B) Review-then-apply (system detects, human approves)
+   Pro: Safety net. No surprises.
+   Con: Adds human bottleneck.
+
+C) Manual (spreadsheet reconciliation)
+   Pro: Full control.
+   Con: Common pain for billing platforms today. Doesn't scale.
+
+Default: **Review-then-apply** for v1. Surface discrepancies, let the
+operator decide. Fully automated after confidence is built. Override toward
+fully-auto for low-value adjustments (under $5) and review for high-value.
+
+## Anti-Patterns
+
+- **Don't reconcile at the wrong granularity.** Event-level reconciliation
+  catches individual errors. Invoice-level reconciliation catches aggregate
+  drift. You need both — don't skip either.
+- **Don't trust the invoice as source of truth.** The event log is the source
+  of truth. The invoice is derived. When they disagree, the event log wins.
+- **Don't build reporting here.** "Revenue by customer" is analytics. "Did
+  customer X get billed for all their events?" is reconciliation. This skill
+  does the second one only.
+- **Don't void+regenerate as a pattern.** Voiding Stripe invoices messes up
+  RevRec. Prefer adjustments on the next invoice over void+regenerate of the
+  current one.
+- **Don't reconcile what you can't trace.** If events don't have
+  idempotencyKeys linking them to credit transactions and invoice line items,
+  reconciliation is guesswork. The traceability chain must be designed
+  upstream (METER.md idempotency → CREDITS.md ledger → invoice).
+- **Annual committed pools mask churn signals.** A customer who decided to leave
+  in month 4 shows as "retained" until month 12. Contract expiry is a lagging
+  indicator — credit consumption velocity is the real-time health signal. If a
+  customer's weekly credit burn drops 60% mid-contract, that's a churn signal
+  NOW, not in 8 months when the contract expires. Reconciliation should surface
+  consumption velocity changes, not just billing accuracy. Don't confuse
+  contract status with product health.
+
+## Tanso Reference Architecture
+
+Your system needs equivalents of these. Tanso's names for reference:
+
+- Ledger entry — Tanso: `CreditTransaction` (eventId, invoiceId, idempotencyKey, balanceBefore/After)
+- Transaction types — Tanso: GRANT/DEDUCT/EXPIRE/REVERSE (audit trail)
+- Grant dedup — Tanso: `CreditGrant.idempotencyKey` (prevents double-grants from webhook retries)
+- Event record — Tanso: `Event` (usageUnits, idempotencyKey, createdAt, featureId, customerId)
+- Event ingestion — Tanso: `POST /api/v1/client/events` with X-Idempotency-Key header
+- Reversal — Tanso: `CreditService.clawBackPlanIncludedCredits()`

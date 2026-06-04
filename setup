@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TSTACK_ROOT="$(cd "$(dirname "$0")" && pwd)"
+TARGET="$HOME/.claude/skills/tstack"
+
+# Check if already installed
+if [ -L "$TARGET" ]; then
+  existing="$(readlink "$TARGET")"
+  if [ "$existing" = "$TSTACK_ROOT" ]; then
+    echo "tstack already installed at $TARGET"
+    exit 0
+  fi
+  echo "Warning: $TARGET is a symlink pointing to $existing"
+  printf "Overwrite? [y/N] "
+  read -r answer
+  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+    echo "Aborted."
+    exit 1
+  fi
+  rm "$TARGET"
+elif [ -d "$TARGET" ]; then
+  echo "Warning: $TARGET is a real directory (not a symlink)."
+  printf "Remove it and replace with symlink? [y/N] "
+  read -r answer
+  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+    echo "Aborted."
+    exit 1
+  fi
+  rm -rf "$TARGET"
+fi
+
+# Create symlink
+mkdir -p "$(dirname "$TARGET")"
+ln -s "$TSTACK_ROOT" "$TARGET"
+
+# Verify
+if [ ! -f "$TARGET/.claude/skills/monetization-engineer/SKILL.md" ]; then
+  echo "Error: symlink created but skill files not found. Check your tstack repo."
+  exit 1
+fi
+
+echo "tstack installed at $TARGET"
+echo ""
+echo "7 skills available:"
+echo "  /monetization-engineer    Design the overall billing model"
+echo "  /meter-design             Define billing units and measurement"
+echo "  /pricing-model            Structure plans, tiers, and pricing"
+echo "  /entitlement-enforcement  Design access control and limits"
+echo "  /credit-ledger            Design prepaid credit pools"
+echo "  /reconciliation           Usage-to-billing drift detection"
+echo "  /provider-integration     Map design to Stripe"
+echo ""
+echo "Run /monetization-engineer to start."
