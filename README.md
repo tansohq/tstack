@@ -32,11 +32,20 @@ ln -s /path/to/tstack ~/.claude/skills/tstack
 
 ## How It Works
 
-Each skill writes a markdown artifact to `.claude/artifacts/`. The next skill in the chain reads it. The chain runs:
+Skills run in a fixed order. Each one writes a markdown artifact, and the next skill in the chain reads it:
 
 ```
-meter → pricing → enforcement → credits → reconciliation → integration
+/meter-design             → .claude/artifacts/METER.md
+/pricing-model            → .claude/artifacts/PLAN.md
+/entitlement-enforcement  → .claude/artifacts/ENFORCEMENT.md
+/credit-ledger            → .claude/artifacts/CREDITS.md
+/reconciliation           → .claude/artifacts/RECONCILIATION.md
+/provider-integration     → .claude/artifacts/INTEGRATION.md
 ```
+
+The artifacts are the actual billing design for your product — structured YAML-in-markdown that captures the billing unit, pricing rules, enforcement policy, credit system, reconciliation checks, and provider sync. They accumulate as you work through the chain, so each skill has the full context of what was decided upstream.
+
+The `artifacts/` folder doesn't ship with the repo. It's created on disk the first time you run a skill. Think of the skills as the engineering process; the artifacts are the output.
 
 When a skill hits a judgment call (hard vs soft limit, billing unit granularity, pricing model choice), it stops and surfaces the tradeoff. Decisions are made by you, not silently resolved.
 
