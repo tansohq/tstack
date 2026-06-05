@@ -38,6 +38,92 @@ for (const dir of skillDirs) {
 }
 
 // ---------------------------------------------------------------------------
+// Skill classification
+// ---------------------------------------------------------------------------
+
+const SKILL_CLASSES: Record<
+  string,
+  { skills: string[]; requiredTools: string[] }
+> = {
+  chain: {
+    skills: [
+      "meter-design",
+      "pricing-model",
+      "entitlement-enforcement",
+      "credit-ledger",
+      "account-hierarchy",
+      "reconciliation",
+      "provider-integration",
+    ],
+    requiredTools: ["Bash", "Read", "Write", "Edit", "AskUserQuestion"],
+  },
+  orchestrator: {
+    skills: ["monetization-engineer"],
+    requiredTools: [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "AskUserQuestion",
+      "Agent",
+    ],
+  },
+  "team-review": {
+    skills: [
+      "billing-reviewer",
+      "pricing-auditor",
+      "billing-qa",
+      "alignment-check",
+    ],
+    requiredTools: ["Bash", "Read", "Grep", "AskUserQuestion"],
+  },
+  "team-ops": {
+    skills: ["account-operations", "credit-operations", "migration-planner"],
+    requiredTools: ["Bash", "Read", "Write", "Edit", "AskUserQuestion"],
+  },
+  "team-intelligence": {
+    skills: [
+      "revenue-reporter",
+      "pql-scorer",
+      "usage-intelligence",
+      "api-health-analyst",
+    ],
+    requiredTools: ["Bash", "Read", "Grep", "AskUserQuestion"],
+  },
+  "team-infra": {
+    skills: ["billing-incident-investigator", "billing-monitor"],
+    requiredTools: ["Bash", "Read", "Grep", "AskUserQuestion"],
+  },
+  "team-design": {
+    skills: ["billing-ux-designer"],
+    requiredTools: ["Bash", "Read", "Write", "AskUserQuestion"],
+  },
+  "team-research": {
+    skills: ["pricing-researcher"],
+    requiredTools: ["Bash", "Read", "Grep", "WebSearch", "AskUserQuestion"],
+  },
+};
+
+const ALL_CLASSIFIED_SKILLS = Object.values(SKILL_CLASSES).flatMap(
+  (c) => c.skills,
+);
+const CHAIN_SKILLS = SKILL_CLASSES.chain.skills;
+const TEAM_SKILLS = Object.entries(SKILL_CLASSES)
+  .filter(([key]) => key.startsWith("team-"))
+  .flatMap(([, c]) => c.skills);
+
+function getClassForSkill(
+  skill: string,
+): { className: string; requiredTools: string[] } | undefined {
+  for (const [className, cls] of Object.entries(SKILL_CLASSES)) {
+    if (cls.skills.includes(skill)) {
+      return { className, requiredTools: cls.requiredTools };
+    }
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // 1. Frontmatter structure
 // ---------------------------------------------------------------------------
 
@@ -83,7 +169,6 @@ describe("Frontmatter structure", () => {
     });
   }
 
-  // Sanity: verify the parser actually extracted real data
   test("parser sanity: meter-design has 5 triggers and description mentions billing unit", () => {
     const fm = frontmatters["meter-design"];
     expect((fm.triggers as unknown[]).length).toBe(5);
@@ -92,17 +177,45 @@ describe("Frontmatter structure", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. Chain consistency — artifact inputs and outputs
+// 2. Skill classification
 // ---------------------------------------------------------------------------
 
-/**
- * The artifact chain encoded from the actual Inputs/Outputs sections.
- * monetization-engineer is the orchestrator and does NOT produce an artifact.
- */
+describe("Skill classification", () => {
+  test("every skill directory is classified", () => {
+    for (const dir of skillDirs) {
+      expect(ALL_CLASSIFIED_SKILLS).toContain(dir);
+    }
+  });
+
+  test("no duplicate classifications", () => {
+    const seen = new Set<string>();
+    for (const skill of ALL_CLASSIFIED_SKILLS) {
+      expect(seen.has(skill)).toBe(false);
+      seen.add(skill);
+    }
+  });
+
+  test("chain has 7 skills", () => {
+    expect(CHAIN_SKILLS.length).toBe(7);
+  });
+
+  test("team has 15 skills", () => {
+    expect(TEAM_SKILLS.length).toBe(15);
+  });
+
+  test("total classified is 23 (7 chain + 15 team + 1 orchestrator)", () => {
+    expect(ALL_CLASSIFIED_SKILLS.length).toBe(23);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3. Chain consistency — artifact inputs and outputs
+// ---------------------------------------------------------------------------
+
 const CHAIN: {
   skill: string;
-  inputs: string[]; // artifact filenames this skill reads
-  output: string; // artifact filename this skill writes
+  inputs: string[];
+  output: string;
 }[] = [
   { skill: "meter-design", inputs: [], output: "METER.md" },
   { skill: "pricing-model", inputs: ["METER.md"], output: "PLAN.md" },
@@ -144,13 +257,11 @@ describe("Chain consistency", () => {
     const text = readSkill(skill);
 
     test(`${skill}: outputs ${output}`, () => {
-      // The Outputs section should reference the artifact filename
       expect(text).toContain(`.claude/artifacts/${output}`);
     });
 
     if (inputs.length === 0) {
       test(`${skill}: has no upstream inputs (first in chain)`, () => {
-        // meter-design explicitly states "None" for inputs
         expect(text).toMatch(/##\s*Inputs[\s\S]*?None/);
       });
     } else {
@@ -170,16 +281,45 @@ describe("Chain consistency", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. CLAUDE.md routing table
+// 4. Team skill consistency
+// ---------------------------------------------------------------------------
+
+describe("Team skill consistency", () => {
+  for (const skill of TEAM_SKILLS) {
+    if (!skillDirs.includes(skill)) continue;
+    const text = readSkill(skill);
+
+    test(`${skill}: references .claude/artifacts/ (reads artifacts)`, () => {
+      expect(text).toContain(".claude/artifacts/");
+    });
+
+    test(`${skill}: does NOT write artifacts`, () => {
+      expect(text).not.toMatch(/Writes\s+`?\.claude\/artifacts\//);
+    });
+
+    test(`${skill}: has explicit artifact-write guard`, () => {
+      expect(text).toMatch(/Do NOT write to.*\.claude\/artifacts/);
+    });
+
+    test(`${skill}: has methodology section`, () => {
+      expect(text).toMatch(/##\s*(Methodology|Reactive Methodology)/);
+    });
+
+    test(`${skill}: has findings or confidence section`, () => {
+      expect(text).toMatch(/##\s*(Findings|Confidence|Findings Format)/);
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 5. CLAUDE.md routing table
 // ---------------------------------------------------------------------------
 
 describe("CLAUDE.md routing table", () => {
   const claudeMd = readFileSync(CLAUDE_MD, "utf-8");
 
-  /** Extract skill names from the routing table rows (| trigger | /skill-name |) */
   function parseRoutingTable(): string[] {
     const skills: string[] = [];
-    // Match table rows (skip header and separator)
     const tableRows = claudeMd.match(/\|[^|]+\|[^|]+\|/g) ?? [];
     for (const row of tableRows) {
       const cells = row
@@ -187,7 +327,7 @@ describe("CLAUDE.md routing table", () => {
         .map((c) => c.trim())
         .filter(Boolean);
       if (cells.length < 2) continue;
-      const skillCell = cells[1]; // second column
+      const skillCell = cells[1];
       const match = skillCell.match(/^\/(\S+)$/);
       if (match) {
         skills.push(match[1]);
@@ -215,13 +355,11 @@ describe("CLAUDE.md routing table", () => {
   });
 
   test("chain order in CLAUDE.md matches artifact dependency order", () => {
-    // Extract the chain line: "meter → pricing → enforcement → credits → reconciliation → integration"
     const chainMatch = claudeMd.match(
       /meter\s*→\s*pricing\s*→\s*enforcement\s*→\s*credits\s*→\s*\[hierarchy\]\s*→\s*reconciliation\s*→\s*integration/,
     );
     expect(chainMatch).not.toBeNull();
 
-    // Map short names in the chain line to full directory names
     const shortToFull: Record<string, string> = {
       meter: "meter-design",
       pricing: "pricing-model",
@@ -236,65 +374,70 @@ describe("CLAUDE.md routing table", () => {
     const shortNames = chainLine.split("→").map((s) => s.trim());
     const chainOrder = shortNames.map((s) => shortToFull[s]);
 
-    // Verify it matches our CHAIN definition order
     const expectedOrder = CHAIN.map((c) => c.skill);
     expect(chainOrder).toEqual(expectedOrder);
   });
 });
 
 // ---------------------------------------------------------------------------
-// 4. Allowed-tools consistency
+// 6. Allowed-tools consistency (per-class)
 // ---------------------------------------------------------------------------
 
 describe("Allowed-tools consistency", () => {
-  const nonOrchestratorSkills = skillDirs.filter(
-    (d) => d !== "monetization-engineer",
-  );
+  for (const [className, cls] of Object.entries(SKILL_CLASSES)) {
+    for (const skill of cls.skills) {
+      if (!skillDirs.includes(skill)) continue;
 
-  test("there are exactly 7 non-orchestrator skills", () => {
-    expect(nonOrchestratorSkills.length).toBe(7);
-  });
+      test(`${skill} (${className}): has required tools`, () => {
+        const tools = frontmatters[skill]["allowed-tools"] as string[];
+        for (const required of cls.requiredTools) {
+          expect(tools).toContain(required);
+        }
+      });
 
-  test("all non-orchestrator skills have identical allowed-tools", () => {
-    const first = (
-      frontmatters[nonOrchestratorSkills[0]]["allowed-tools"] as string[]
-    )
-      .slice()
-      .sort();
-    for (const dir of nonOrchestratorSkills.slice(1)) {
-      const tools = (frontmatters[dir]["allowed-tools"] as string[])
-        .slice()
-        .sort();
-      expect(tools).toEqual(first);
+      test(`${skill} (${className}): has no extra tools`, () => {
+        const tools = new Set(frontmatters[skill]["allowed-tools"] as string[]);
+        const required = new Set(cls.requiredTools);
+        const extras = [...tools].filter((t) => !required.has(t));
+        expect(extras).toEqual([]);
+      });
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 7. Trigger uniqueness
+// ---------------------------------------------------------------------------
+
+describe("Trigger uniqueness", () => {
+  test("no trigger phrase is shared across skills", () => {
+    const seen = new Map<string, string>();
+    for (const dir of skillDirs) {
+      const triggers = frontmatters[dir].triggers as string[];
+      for (const trigger of triggers) {
+        const normalized = trigger.toLowerCase().trim();
+        if (seen.has(normalized)) {
+          throw new Error(
+            `Trigger "${trigger}" used by both ${seen.get(normalized)} and ${dir}`,
+          );
+        }
+        seen.set(normalized, dir);
+      }
     }
   });
+});
 
-  test("monetization-engineer has the standard list plus Agent", () => {
-    const baseTools = new Set(
-      frontmatters[nonOrchestratorSkills[0]]["allowed-tools"] as string[],
-    );
-    const orchTools = new Set(
-      frontmatters["monetization-engineer"]["allowed-tools"] as string[],
-    );
+// ---------------------------------------------------------------------------
+// 8. Template freshness
+// ---------------------------------------------------------------------------
 
-    // orchestrator should have everything base has
-    for (const tool of baseTools) {
-      expect(orchTools.has(tool)).toBe(true);
+describe("Template freshness", () => {
+  test("every skill with a .tmpl has a matching SKILL.md", () => {
+    for (const dir of skillDirs) {
+      const tmplPath = join(SKILLS_DIR, dir, "SKILL.md.tmpl");
+      if (!existsSync(tmplPath)) continue;
+      const outPath = join(SKILLS_DIR, dir, "SKILL.md");
+      expect(existsSync(outPath)).toBe(true);
     }
-
-    // the extra tool should be exactly "Agent"
-    const extras = [...orchTools].filter((t) => !baseTools.has(t));
-    expect(extras).toEqual(["Agent"]);
-  });
-
-  test("standard allowed-tools list contains expected tools", () => {
-    const tools = frontmatters[nonOrchestratorSkills[0]][
-      "allowed-tools"
-    ] as string[];
-    expect(tools).toContain("Bash");
-    expect(tools).toContain("Read");
-    expect(tools).toContain("Write");
-    expect(tools).toContain("Edit");
-    expect(tools).toContain("AskUserQuestion");
   });
 });

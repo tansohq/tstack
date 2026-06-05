@@ -1,2 +1,3 @@
 .DS_Store
 .claude/artifacts/
+node_modules/

@@ -2,65 +2,30 @@
  * gen-skill-docs.ts — Generate SKILL.md files from .tmpl templates.
  *
  * Discovers all SKILL.md.tmpl files under .claude/skills/,
- * resolves {{PLACEHOLDER}} markers, writes SKILL.md alongside each template.
+ * resolves {{PLACEHOLDER}} markers via function-based resolvers,
+ * writes SKILL.md alongside each template.
  *
- * Usage: bun run scripts/gen-skill-docs.ts
+ * Usage:
+ *   bun run scripts/gen-skill-docs.ts            # generate all
+ *   bun run scripts/gen-skill-docs.ts --dry-run   # check freshness (exit 1 if stale)
  */
 
 import { readdirSync, readFileSync, writeFileSync, statSync } from "fs";
 import { join } from "path";
+import { RESOLVERS } from "./resolvers/index";
 
 const ROOT = join(import.meta.dir, "..");
 const SKILLS_DIR = join(ROOT, ".claude", "skills");
+const dryRun = process.argv.includes("--dry-run");
 
-// ---------------------------------------------------------------------------
-// Resolver strings — shared boilerplate injected into templates
-// ---------------------------------------------------------------------------
-
-const RESOLVERS: Record<string, string> = {
-  // Standard allowed-tools block (2-space YAML indent, no trailing newline)
-  ALLOWED_TOOLS_STANDARD: [
-    "  - Bash",
-    "  - Read",
-    "  - Write",
-    "  - Edit",
-    "  - AskUserQuestion",
-  ].join("\n"),
-
-  // Decision format template — canonical version from monetization-engineer
-  DECISION_FORMAT: [
-    "```",
-    "D<N> — <one-line question>",
-    "",
-    "What's at stake: <one sentence on what breaks if we pick wrong>",
-    "",
-    "Options:",
-    "",
-    "A) <option> ",
-    "   Pro: <concrete observable benefit>",
-    "   Con: <concrete observable cost>",
-    "",
-    "B) <option>",
-    "   Pro: <concrete observable benefit>",
-    "   Con: <concrete observable cost>",
-    "",
-    'My lean: <which and why in one sentence, OR "no lean — genuinely depends on your context">',
-    "```",
-  ].join("\n"),
-};
-
-// ---------------------------------------------------------------------------
-// Discovery + generation
-// ---------------------------------------------------------------------------
-
-function resolve(template: string): string {
+function resolve(template: string, skillName: string): string {
   return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    const value = RESOLVERS[key];
-    if (value === undefined) {
-      console.error(`  ERROR: unknown placeholder {{${key}}}`);
+    const resolver = RESOLVERS[key];
+    if (!resolver) {
+      console.error(`  ERROR: unknown placeholder {{${key}}} in ${skillName}`);
       process.exit(1);
     }
-    return value;
+    return resolver();
   });
 }
 
@@ -70,6 +35,7 @@ const skillDirs = readdirSync(SKILLS_DIR).filter((name) => {
 });
 
 let generated = 0;
+let stale = 0;
 
 for (const dir of skillDirs.sort()) {
   const tmplPath = join(SKILLS_DIR, dir, "SKILL.md.tmpl");
@@ -79,16 +45,46 @@ for (const dir of skillDirs.sort()) {
   try {
     tmpl = readFileSync(tmplPath, "utf-8");
   } catch {
-    // No template for this skill — skip
     continue;
   }
 
-  const resolved = resolve(tmpl);
+  const resolved = resolve(tmpl, dir);
+
+  if (dryRun) {
+    let existing: string;
+    try {
+      existing = readFileSync(outPath, "utf-8");
+    } catch {
+      console.error(
+        `  MISSING: ${dir}/SKILL.md (template exists but no generated file)`,
+      );
+      stale++;
+      continue;
+    }
+    if (existing !== resolved) {
+      console.error(
+        `  STALE: ${dir}/SKILL.md (run 'bun run build' to regenerate)`,
+      );
+      stale++;
+    }
+    continue;
+  }
+
   writeFileSync(outPath, resolved);
   generated++;
   console.log(`  ${dir}/SKILL.md`);
 }
 
-console.log(
-  `\nGenerated ${generated} SKILL.md file${generated !== 1 ? "s" : ""}.`,
-);
+if (dryRun) {
+  if (stale > 0) {
+    console.error(
+      `\n${stale} stale file${stale !== 1 ? "s" : ""}. Run 'bun run build' to regenerate.`,
+    );
+    process.exit(1);
+  }
+  console.log("All SKILL.md files are up to date.");
+} else {
+  console.log(
+    `\nGenerated ${generated} SKILL.md file${generated !== 1 ? "s" : ""}.`,
+  );
+}

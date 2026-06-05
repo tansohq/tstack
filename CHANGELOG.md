@@ -1,5 +1,47 @@
 # Changelog
 
+## [2.0.0] - 2026-06-04
+
+From billing workflow to billing team. Adds 15 reactive "team" skills alongside
+the existing 7-skill design chain. Derived from real self-serve billing
+operations. Template system upgraded to function-based resolvers.
+
+### Added — Team Skills (Review & Operations)
+
+- `/billing-reviewer` — audit billing code for race conditions, double-charges, idempotency gaps
+- `/pricing-auditor` — evaluate unit economics, margins, competitive position
+- `/billing-qa` — generate billing edge case test scenarios (proration, timezone, currency)
+- `/alignment-check` — check pricing vs sales motion, enterprise vs self-serve conflicts
+- `/account-operations` — upgrade/downgrade paths, cancellation flows, refund playbooks
+- `/credit-operations` — credit swaps, goodwill grants, manual adjustments with audit trail
+- `/migration-planner` — plan pricing model changes with grandfathering and rollback
+- `/revenue-reporter` — MRR/ARR, revenue recognition with credits, churn decomposition
+- `/pql-scorer` — product-qualified lead scoring from usage patterns
+- `/usage-intelligence` — account health, churn risk, expansion signals, credit run-out projection
+- `/api-health-analyst` — per-account error rates, customer vs platform error attribution
+- `/billing-incident-investigator` — trace meter → aggregation → entitlement → invoice divergence
+- `/billing-monitor` — drift detection, webhook monitoring, usage spike alerting
+- `/billing-ux-designer` — usage dashboards, plan picker, credit run-out display patterns
+- `/pricing-researcher` — competitive pricing teardowns and model precedent research
+
+### Added — Infrastructure
+
+- Function-based resolver system (`scripts/resolvers/`) replacing flat string map
+- 7 tool-set resolvers by skill class (chain, orchestrator, review, ops, intelligence, design, research)
+- Shared methodology resolvers: `REACTIVE_METHODOLOGY`, `CONFIDENCE_CALIBRATION`,
+  `ARTIFACT_READ_PROTOCOL`, `CREDIT_RUNOUT_PROJECTION`
+- `--dry-run` flag for template freshness checks
+- Skill classification system in test suite (chain, team-review, team-ops, etc.)
+- Team skill validation tests (reads artifacts, doesn't write, has methodology section)
+- Two-layer CLAUDE.md routing table (chain + team organized by lens)
+
+### Changed
+
+- CLAUDE.md redesigned with chain and team sections
+- Test suite restructured from flat tool-set validation to per-class validation
+- Setup script updated for 23 skills with chain/team sections
+- `account-hierarchy` now generated from template (was hand-written)
+
 ## [1.1.0] - 2026-06-04
 
 Account hierarchy, credit model taxonomy, and cross-cutting billing gaps.
@@ -11,7 +53,7 @@ Account hierarchy, credit model taxonomy, and cross-cutting billing gaps.
   independent). Optional step in the chain between credits and reconciliation.
 - Credit model taxonomy in `/credit-ledger` — three real denomination models
   (currency, universal abstract + burn multipliers, product-specific siloed pools)
-  with examples from Twilio, Snowflake, PDL, ElevenLabs
+  with examples from Twilio, Snowflake, ElevenLabs
 - Credit scoping decision (account-level vs contract/line-item) in `/credit-ledger`
 - CS operations (transfer, adjustment, rebalance) built on existing ledger
   primitives in `/credit-ledger`

@@ -43,8 +43,9 @@ to seeing it: "That's really nice... this is a big problem for SaaS."
 Your system needs a simulation endpoint (Tanso exposes this as
 `POST /api/v1/client/entitlements` with UsageContext). The customer can
 dry-run "what if I consume 50 more units?" and get back
-`wouldExceedLimit: true` without burning anything. No other billing
-platform does this at the API layer.
+`wouldExceedLimit: true` without burning anything. Few billing platforms
+expose simulation as a customer-facing API — most limit entitlement
+checks to allow/deny without projected-state simulation.
 
 ## Inputs
 

@@ -1,21 +1,8 @@
 # tstack
 
-Billing engineer skills for [Claude Code](https://claude.ai/claude-code).
+Billing team for [Claude Code](https://claude.ai/claude-code).
 
-tstack designs usage-based monetization systems for SaaS products. It's entitlement-centered — every billing decision flows through what the customer is allowed to do, not just what they're charged. Skills are artifact-chained: each writes a structured markdown file that the next skill reads, building up a complete billing design incrementally.
-
-## Skills
-
-| Skill | What it does |
-|-------|-------------|
-| `/monetization-engineer` | Design the overall billing model — what to charge for, how, and why |
-| `/meter-design` | Define billing units, aggregation windows, and measurement points |
-| `/pricing-model` | Structure plan tiers, feature packaging, and price points |
-| `/entitlement-enforcement` | Design access control — allow/deny logic, hard/soft limits, grace periods |
-| `/credit-ledger` | Design prepaid credit pools, grants, drawdown, and expiry. Credit model taxonomy, CS operations |
-| `/account-hierarchy` | Parent/child accounts, per-API-key credit budgets, reseller models, credit allocation cascading |
-| `/reconciliation` | Ensure metered usage matches billed amounts — true-up, drift detection, rounding checks |
-| `/provider-integration` | Map the billing design to Stripe (or other providers) — subscriptions, invoices, usage records, contract lifecycle |
+tstack is a monetization team for usage-based SaaS products. Two layers: a **design chain** that builds billing systems from scratch (7 skills, artifact-chained), and a **review team** that audits, operates, and monitors billing that exists (15 skills, reactive). Derived from real self-serve billing operations.
 
 ## Install
 
@@ -27,68 +14,93 @@ cd tstack
 
 The setup script symlinks tstack into `~/.claude/skills/tstack` and verifies the skills are accessible. Run it again anytime — it's idempotent.
 
-**Manual alternative:** If you prefer, symlink directly:
+## The Chain (Design Workflow)
 
-```bash
-ln -s /path/to/tstack ~/.claude/skills/tstack
+Run `/monetization-engineer` to design a billing system from scratch. It walks you through the chain:
+
 ```
+meter → pricing → enforcement → credits → [hierarchy] → reconciliation → integration
+```
+
+| Skill | What it does | Artifact |
+|-------|-------------|----------|
+| `/monetization-engineer` | Orchestrate the billing design chain | — |
+| `/meter-design` | Define billing units, event schemas, aggregation | METER.md |
+| `/pricing-model` | Structure plan tiers, feature packaging, pricing | PLAN.md |
+| `/entitlement-enforcement` | Design allow/deny logic, hard/soft limits | ENFORCEMENT.md |
+| `/credit-ledger` | Prepaid credit pools, grants, drawdown, expiry | CREDITS.md |
+| `/account-hierarchy` | Parent/child accounts, per-key budgets [optional] | HIERARCHY.md |
+| `/reconciliation` | Usage-to-billing drift detection and true-up | RECONCILIATION.md |
+| `/provider-integration` | Map design to Stripe subscriptions and invoices | INTEGRATION.md |
+
+Each skill writes a structured markdown artifact that the next skill reads. Decisions accumulate — every downstream skill has full context from upstream choices.
+
+## The Team (Review & Operations)
+
+Run any team skill directly. They read chain artifacts (if they exist) or work from your description of an existing billing system.
+
+### Review / Audit
+
+| Skill | Lens | What it does |
+|-------|------|-------------|
+| `/billing-reviewer` | Backend dev | Audit for race conditions, double-charges, idempotency gaps |
+| `/pricing-auditor` | Rev ops / finance | Evaluate unit economics, margins, competitive position |
+| `/billing-qa` | QA | Generate edge case test scenarios (proration, timezone, currency) |
+| `/alignment-check` | Cross-functional | Check pricing vs sales motion, enterprise vs self-serve conflicts |
+
+### Operations
+
+| Skill | Lens | What it does |
+|-------|------|-------------|
+| `/account-operations` | Support / ops | Upgrade, downgrade, cancellation, and refund playbooks |
+| `/credit-operations` | Customer success | Credit swaps, goodwill grants, manual adjustments |
+| `/migration-planner` | PM | Plan pricing changes with grandfathering and rollback |
+
+### Intelligence
+
+| Skill | Lens | What it does |
+|-------|------|-------------|
+| `/revenue-reporter` | Finance | MRR/ARR, revenue recognition with credits, churn decomposition |
+| `/pql-scorer` | Growth / sales | Product-qualified lead scoring from usage patterns |
+| `/usage-intelligence` | CS / account mgmt | Account health, churn risk, credit run-out projection |
+| `/api-health-analyst` | Reliability | Per-account error rates, customer vs platform error attribution |
+
+### Infrastructure
+
+| Skill | Lens | What it does |
+|-------|------|-------------|
+| `/billing-incident-investigator` | On-call | Trace billing discrepancies from meter to invoice |
+| `/billing-monitor` | Observability | Drift detection, webhook monitoring, usage spike alerting |
+
+### Design
+
+| Skill | Lens | What it does |
+|-------|------|-------------|
+| `/billing-ux-designer` | Design | Usage dashboards, plan picker, credit run-out display |
+
+### Research
+
+| Skill | Lens | What it does |
+|-------|------|-------------|
+| `/pricing-researcher` | Market intel | Competitive pricing teardowns and model precedent research |
 
 ## How It Works
 
-Run `/monetization-engineer` to start. It walks you through the chain, one skill at a time:
-
-```
-                          ┌─────────────────────────────────────────┐
-                          │         /monetization-engineer          │
-                          │      orchestrator — routes the chain    │
-                          └────────────────┬────────────────────────┘
-                                           │
-                    ┌──────────────────────────────────────────────┐
-                    │                 THE CHAIN                    │
-                    │                                              │
-                    │  /meter-design          → METER.md           │
-                    │       │  what do we count?                   │
-                    │       ▼                                      │
-                    │  /pricing-model         → PLAN.md            │
-                    │       │  what do we charge?                  │
-                    │       ▼                                      │
-                    │  /entitlement-enforcement → ENFORCEMENT.md   │
-                    │       │  what do we allow or deny?           │
-                    │       ▼                                      │
-                    │  /credit-ledger         → CREDITS.md         │
-                    │       │  how do prepaid credits work?        │
-                    │       ▼                                      │
-                    │  /account-hierarchy     → HIERARCHY.md       │
-                    │       │  who can spend what? [optional]      │
-                    │       ▼                                      │
-                    │  /reconciliation        → RECONCILIATION.md  │
-                    │       │  did we bill what we consumed?       │
-                    │       ▼                                      │
-                    │  /provider-integration  → INTEGRATION.md     │
-                    │          how does this sync to Stripe?       │
-                    │                                              │
-                    └──────────────────────────────────────────────┘
-                                           │
-                          ┌────────────────▼────────────────────────┐
-                          │        .claude/artifacts/               │
-                          │                                         │
-                          │  Your billing design lives here.        │
-                          │  Up to 7 markdown files, one per skill. │
-                          │  Each skill reads upstream artifacts    │
-                          │  so every decision has full context.    │
-                          │                                         │
-                          │  This folder doesn't ship with the      │
-                          │  repo — it's created the first time     │
-                          │  you run a skill.                       │
-                          └─────────────────────────────────────────┘
-```
-
-Each artifact is structured YAML-in-markdown: billing units, pricing rules, enforcement policy, credit pools, reconciliation checks, provider sync. They accumulate as you work through the chain.
-
-**Nothing touches your codebase.** The output is markdown recommendations — no code generated, no deployments, no Stripe changes. Run the full chain, read the artifacts, decide if you agree, then implement on your own terms.
+**Nothing touches your codebase.** Chain skills produce markdown artifacts. Team skills produce findings and recommendations. No code generated, no deployments, no Stripe changes. Read the output, decide if you agree, implement on your own terms.
 
 When a skill hits a judgment call (hard vs soft limit, billing unit, pricing model, overage behavior), it **stops and surfaces the tradeoff**. Decisions are made by you, not silently resolved.
 
-## Inspired By
+## Build
 
-[gstack](https://github.com/garrytan/gstack) — Garry Tan's skill pack for Claude Code.
+```bash
+bun install              # install dev dependencies
+bun run build            # generate SKILL.md from templates
+bun test                 # run validation tests
+bun run gen:skill-docs --dry-run  # check template freshness
+```
+
+Skills are generated from `.tmpl` templates via a resolver pipeline. Edit the template, not the output.
+
+## About
+
+Tanso's billing team skill pack for Claude Code. Inspired by [gstack](https://github.com/garrytan/gstack).

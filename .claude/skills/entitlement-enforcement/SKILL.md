@@ -47,8 +47,9 @@ to seeing it: "That's really nice... this is a big problem for SaaS."
 Your system needs a simulation endpoint (Tanso exposes this as
 `POST /api/v1/client/entitlements` with UsageContext). The customer can
 dry-run "what if I consume 50 more units?" and get back
-`wouldExceedLimit: true` without burning anything. No other billing
-platform does this at the API layer.
+`wouldExceedLimit: true` without burning anything. Few billing platforms
+expose simulation as a customer-facing API — most limit entitlement
+checks to allow/deny without projected-state simulation.
 
 ## Inputs
 
@@ -121,11 +122,6 @@ The entitlement check evaluates in order. Tanso's reference implementation
 This order matters. Revocation is cheapest to check (single boolean). Usage
 requires aggregating events since period start. Credit requires querying the
 pool. Check cheap things first.
-
-When account hierarchy exists (HIERARCHY.md present), the check walks levels:
-check child/key limit → check parent/project limit → check org-level balance.
-Strictest applicable limit wins. This adds indirection, not a different model —
-the same check sequence runs at each level.
 
 ### Step 3: Design limit behavior — STOP
 
@@ -255,39 +251,6 @@ more than any pricing decision.
 The customer's application blocks on this call. For real-time applications
 (voice AI, API gateways), this is <100ms. For batch processing, 500ms is
 fine. This constrains the enforcement architecture (caching, read replicas).
-
-**D6 — Downgrade behavior.** Customer downgrades mid-term. Current usage may
-exceed the lower plan's limits. What happens to active entitlements, in-flight
-usage, and credit balance?
-
-What's at stake: handling this wrong is a trust violation in one direction
-(cutting access the customer paid for) or an accounting problem in the other
-(providing services beyond what the new plan covers).
-
-Options:
-
-A) Immediate enforcement (downgrade takes effect now, excess usage denied)
-   Pro: Clean state. No zombie entitlements. PLG products (Slack, Notion) do
-   this and issue credit for unused time — simpler mental model for self-serve.
-   Con: Customer paid for current period. Cutting access mid-period is a trust
-   violation for enterprise.
-
-B) End-of-period enforcement (finish current period on old plan, new limits
-   at renewal)
-   Pro: Customer gets what they paid for. Standard for enterprise (Zoom,
-   GitHub). Stripe supports via `proration_behavior: none`.
-   Con: "Downgrade" doesn't feel immediate. Customer dashboard shows old
-   limits until renewal.
-
-C) Graceful transition (warn at downgrade, enforce at next billing cycle,
-   refund unused portion)
-   Pro: Transparent. Customer sees what's coming. Proration handles the money.
-   Con: Proration calculation, partial refund, state tracking complexity.
-
-Default: **End-of-period enforcement.** Customer paid for the current period.
-Override toward immediate for PLG/self-serve (simpler mental model + credit
-for unused time) or when compliance requires revoking access to regulated
-capabilities.
 
 ## Anti-Patterns
 

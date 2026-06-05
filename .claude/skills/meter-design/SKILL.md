@@ -244,8 +244,10 @@ My lean: <which and why in one sentence, OR "no lean — genuinely depends on yo
 - **Don't conflate billing unit with feature.** "Access to analytics" is a
   feature (boolean entitlement). "Number of reports generated" is a billing
   unit (metered entitlement). They're different PlanFeatureRule types.
-- **Don't over-meter.** Track what the entitlement check needs. Everything
-  else is analytics, not metering.
+- **Capture richly, derive narrowly.** The event ingestion layer should
+  capture all relevant metadata (you can't re-emit history when pricing
+  changes). But the billing unit derivation should only aggregate what the
+  entitlement check needs. Over-instrument events; don't over-derive metrics.
 
 ## Tanso Reference Architecture
 

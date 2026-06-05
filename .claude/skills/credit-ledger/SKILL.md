@@ -61,13 +61,6 @@ Reads:
 Writes `.claude/artifacts/CREDITS.md` with:
 
 ```yaml
-credit_architecture:
-  denomination_model: <string>   # CURRENCY | UNIVERSAL_ABSTRACT | PRODUCT_SPECIFIC
-  scoping: <string>              # ACCOUNT | CONTRACT | BLOCK
-  burn_rate_table:               # only for UNIVERSAL_ABSTRACT
-    - product: <string>
-      credits_per_unit: <number>
-
 credit_pools:
   - pool_name: <string>
     denomination: <string>       # CREDITS | TOKENS | COMPUTE_UNITS | custom
@@ -107,11 +100,6 @@ ledger:
     - idempotency_key
     - reversed_transaction_id   # for REVERSE entries
   immutability: "Records never updated or deleted. Undoing = REVERSE entry."
-
-cs_operations:
-  transfer_enabled: <boolean>    # only for PRODUCT_SPECIFIC
-  approval_required: <boolean>
-  notes: "Transfers emit linked DEDUCT+GRANT with shared transfer_id. Not a new transaction type."
 ```
 
 ## How You Work
@@ -124,51 +112,6 @@ If credits are specified, proceed.
 Key question: does the entitlement check need to answer "can this customer
 AFFORD this event?" or just "have they USED too many?" If the former, credits.
 If the latter, simple metering is sufficient.
-
-### Step 1.5: Choose the credit model
-
-Before designing the pool, determine the denomination model. This choice has
-massive downstream consequences — it determines whether CS will ever need to
-transfer credits between pools, how multi-product pricing works, and how
-complex reconciliation becomes.
-
-Three real models exist. A fourth (siloed pools with exchange rates between
-them) is theoretically possible but no vendor ships it — it's complexity
-without benefit over the universal model.
-
-**Currency-denominated** (1 credit = $0.01)
-Examples: Twilio, OpenAI, Anthropic, Vercel.
-One USD balance, different products consume at different dollar rates.
-Pro: Transparent. No transfer problem — it's money. Rate card changes are
-just price updates. Customer knows exactly what things cost.
-Con: No value abstraction. Price changes are visible and feel like increases.
-Ugly fractional numbers at sub-cent costs.
-
-**Universal abstract + burn-rate multiplier table** (1 credit = 1 abstract unit)
-Examples: Snowflake (warehouse sizes burn 1-512 credits/hr), Databricks DBU,
-ElevenLabs (post-reunification), Zapier tasks.
-One pool of abstract credits. A multiplier table defines how many credits each
-product/action consumes. New products = new row in the table.
-Pro: One pool, multiple products. Pricing surgery via weight changes
-(pricing-model D6) is invisible — "image generation now costs 3 credits
-instead of 2." Best for multi-product.
-Con: Customer confusion ("how many credits do I need?"). Multiplier changes
-are silent price changes.
-Cautionary tale: ElevenLabs tried product-specific pools (Jan 2025), reversed
-to universal within 7 months. Forecasting pain across separate balances killed it.
-
-**Product-specific siloed pools** (each product has its own credit type)
-Examples: PDL (person credits, company credits, IP credits), pre-acquisition Clearbit.
-Separate pools per product. Each pool has its own balance, grants, consumption.
-Pro: Clean isolation when products have genuinely incompatible value units.
-Con: Creates the transfer problem. CS will ask to move credits between pools
-for retention. Stranded balances when customer over-buys one type. Forecast
-pain. If you need TRANSFER frequently, you chose the wrong model.
-
-Note: 79 SaaS companies now use credit-based pricing (up 126% YoY per
-PricingSaaS). This is the dominant trend in AI billing.
-
-See D5 for the decision point.
 
 ### Step 2: Design the pool
 
@@ -233,11 +176,6 @@ B) FULL (all unused credits roll over)
 C) CAPPED (roll over up to N credits)
    Pro: Compromise — customer keeps some, liability is bounded.
    Con: Another number to decide (what's the cap?).
-   Implementation: Store rolled-over credits as a separate grant (type:
-   ROLLOVER), not merged into the new period's PLAN_INCLUDED grant. Keeps
-   unit price calculations clean. Rollover grants never drive unit price —
-   they are free balance carried forward, not purchased units.
-   On cancellation: rollover does not apply. No rollover on termination.
 
 Default: **CAPPED** for plan-included credits. Full rollover creates
 unbounded liability. No rollover punishes customers. Cap at 1x the monthly
@@ -271,6 +209,9 @@ Options:
 A) 1:1 with currency (1 credit = $0.01)
    Pro: Transparent. Customer knows exactly what things cost.
    Con: Prices are ugly numbers. "This event costs 3.7 credits."
+   Risk: Dollar-denominated credits can trigger financial services regulatory
+   scrutiny in some jurisdictions and create rev-rec mismatches when credits
+   are purchased at a bulk discount. Consult legal and finance.
 
 B) Abstract units (1 credit = 1 unit of value, priced by you)
    Pro: Clean numbers. "This event costs 1 credit." Pricing flexibility.
@@ -287,70 +228,6 @@ theory, or the analysis required to establish value-based weights exceeds what
 early-stage companies can resource. Probably both. Don't let the ideal block
 shipping — cost-based weights that you adjust over time are a valid starting
 position.
-
-**D5 — Credit model.** Which denomination model? See Step 1.5 above.
-
-Options:
-A) Currency-denominated (Twilio/OpenAI)
-B) Universal abstract + burn-rate multiplier table (Snowflake/ElevenLabs)
-C) Product-specific siloed pools (PDL)
-
-No default — depends on whether the product is single-product or multi-product
-and whether value units are commensurable. Single product with stable cost →
-currency-denominated. Multi-product → universal abstract. Genuinely
-incompatible value units AND you accept the CS pain → siloed pools.
-
-**D6 — Credit scoping.** WHERE does the pool live? Orthogonal to D5 (what
-it's denominated in).
-
-Options:
-
-A) Account-level pool (one pool per customer, fungible across all usage)
-   Pro: Simple. Works for self-serve/PLG. One balance to check.
-   Con: Loses deal tracking at enterprise scale. Discounted credits from one
-   deal subsidize another product's low margin. Rev-rec under ASC 606 gets murky.
-
-B) Contract/line-item-scoped pools (pool tied to a specific deal or product line)
-   Pro: Per-deal rates preserved. Margin management across products. Clean rev-rec.
-   Con: More complex. Multiple active pools per customer.
-
-C) Block-based (account-level wallet, grants carry origin metadata)
-   Pro: Compromise — simple single balance, but grants track which contract
-   they came from for rev-rec.
-   Con: FIFO consumption may not respect contract boundaries.
-
-Default: Account-level for v1. Upgrade to contract-scoped when per-deal
-discount rates or multi-product margins emerge. Metronome recommends supporting
-both simultaneously.
-
-Cross-reference: if account hierarchy exists (see `/account-hierarchy`), credit
-scoping is the billing/contract axis; hierarchy is the organizational axis
-(org → team → key). A system may need both.
-
-## CS Operations
-
-Operational transactions built on top of the existing ledger primitives
-(GRANT/DEDUCT/EXPIRE/REVERSE). These are application-layer conveniences,
-not new ledger transaction types.
-
-**Transfer (between pools):** CS moves credits from one pool to another for
-customer retention or to correct a forecast miss. Emits a linked DEDUCT from
-source pool + GRANT to destination pool, sharing a `transfer_id` in metadata.
-Both entries are standard ledger rows — auditable, reversible, reconcilable.
-Requires approval workflow. Only relevant for product-specific pools (D5
-option C).
-
-**Adjustment (billing error correction):** REVERSE the incorrect entry + new
-GRANT or DEDUCT with reason code and approval chain. Already supported by the
-existing ledger schema. Standard across all billing platforms.
-
-**Rebalance (forecast correction):** Model as a contract amendment with
-associated credit adjustments, not a distinct operation. The contract changes
-(new allocation), the ledger reflects it (GRANT for the new amount, EXPIRE
-for the old unused portion).
-
-Anti-pattern: if CS is doing transfers weekly, the credit model is wrong.
-Universal credits with burn multipliers eliminate the need entirely.
 
 ## Anti-Patterns
 
@@ -379,13 +256,6 @@ Universal credits with burn multipliers eliminate the need entirely.
   vs hard expiry), not whether to bound it. Purchased credits feel like they
   "should" never expire, but even they need a contractual window (12-24 months)
   or the liability grows without bound.
-- **Don't sync promotional/comp credits as revenue.** Promotional credits
-  reduce the invoice total (Stripe supports `category=promotional` — they DO
-  flow through the processor). But they are not revenue. Under ASC 606:
-  promotional credits reduce transaction price, service credits reduce revenue,
-  free trials create no revenue until conversion. Track paid vs promotional
-  grants separately. Pure comps (support goodwill, sales incentives) stay
-  internal-only — never appear on any invoice.
 
 
 ## Tanso Reference Architecture
