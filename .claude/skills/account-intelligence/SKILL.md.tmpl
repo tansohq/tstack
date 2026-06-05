@@ -1,0 +1,112 @@
+---
+name: account-intelligence
+version: 2.0.0
+description: |
+  Account health scoring, churn risk, expansion signals, PQL scoring, credit
+  run-out projection, and sales handoff. CS and growth lens on usage data.
+triggers:
+  - account health
+  - churn risk
+  - expansion signal
+  - PQL
+  - usage scoring
+  - run-out projection
+allowed-tools:
+{{ALLOWED_TOOLS_INTELLIGENCE}}
+---
+
+# Account Intelligence
+
+Two jobs, one data source. CS needs "which accounts are at risk." Sales needs
+"which accounts are ready to buy." Both answers come from billing usage data.
+
+**Scope note:** This skill scores on usage data from the billing system. For
+full PQL scoring, layer firmographic fit signals (company size, ICP match)
+from your CRM — usage scoring alone doesn't capture revenue potential.
+
+## Artifact Inputs
+
+{{ARTIFACT_READ_PROTOCOL}}
+
+Read these artifacts if they exist:
+- `.claude/artifacts/METER.md` — billing unit, event shape
+- `.claude/artifacts/PLAN.md` — plan tiers, limits, included allowances
+- `.claude/artifacts/CREDITS.md` — credit pools, grants, rollover, expiry
+- `.claude/artifacts/ENFORCEMENT.md` — hard/soft limits, boundary behavior
+
+## Methodology
+
+{{REACTIVE_METHODOLOGY}}
+
+## Health Scoring
+
+Composite 0-100 score predicting renewal, expansion, or churn.
+
+| Signal | Weight | Healthy | Warning | Critical |
+|--------|--------|---------|---------|----------|
+| Usage volume trend | 25% | Stable/growing | Flat 4+ weeks | Declining 3+ weeks |
+| Feature adoption | 20% | 60%+ of entitled features | 30-60% | <30% |
+| Error rate | 15% | <1% | 1-5% | >5% |
+| Credit burn rate | 15% | 70-100% consumed | 40-70% | <40% |
+| Engagement recency | 15% | Active last 3 days | Last 7 days | 7+ days silent |
+| Support tickets | 10% | 0-1 open | 2-3 open | 4+ open |
+
+**80-100** healthy, monitor for expansion. **60-79** watch, review next check-in.
+**40-59** at risk, proactive outreach. **0-39** critical, escalate immediately.
+
+Calibrate weights against actual churn events after 90 days.
+
+## Churn Risk Signals
+
+Each signal alone is noise. Clusters are actionable.
+
+- **Sustained usage decline** — 3+ consecutive weeks. Most reliable predictor.
+- **Credit consumption slowdown** — burn rate decelerating month over month.
+- **API key removal** — deleting integrations. Strong negative signal.
+- **Feature narrowing** — retreating to minimum viable usage. Precedes churn by 4-8 weeks.
+- **Reduced seat count** — users being removed. Cost-cutting or preparing to leave.
+
+## Expansion & PQL Signals
+
+Indicators an account is ready for upgrade or sales conversation.
+
+- **Limit proximity** — `used/limit > 0.8` on any meter. Hotter if hit in first half of period.
+- **Consumption acceleration** — 20%+ week-over-week growth for 2+ weeks.
+- **Feature breadth** — using multiple event types. Breadth × depth = stickiness.
+- **Growing team** — new users, new API keys, new projects.
+- **Approaching renewal** — 30 days out + high usage = golden upgrade window.
+
+**Anti-gaming:** Filter out bots (uniform request patterns, 24/7, no variance),
+runaway scripts (100x spike + high error rate from single key), and evaluation
+gaming (usage hits exactly 100% of free tier then stops). Score on sustained
+2+ week patterns, not spikes.
+
+## Score Thresholds & Routing
+
+- **High (>80)** — route to sales with handoff package. Human should call.
+- **Medium (50-80)** — automated nudges: in-app upgrade prompt, email.
+- **Low (<50)** — no sales action. Monitor for changes.
+- **Critical health (<40)** — route to CS, not sales. Retention first.
+
+## Sales Handoff
+
+When routing to sales, include: account name, score breakdown (velocity,
+breadth, proximity, team signals, timing), current plan + price, recommended
+next plan + why, 30-day usage summary, risk factors. The rep should never
+have to ask "what does this customer do?"
+
+{{CREDIT_RUNOUT_PROJECTION}}
+
+## Seasonal Patterns
+
+Compare current period to same period last year, not just prior period.
+Election cycles, Q4 spikes, academic calendars. Flag seasonal accounts so
+"declining usage" thresholds adjust for off-cycle periods.
+
+## Findings Format
+
+{{CONFIDENCE_CALIBRATION}}
+
+## Decision Points — STOP and Ask
+
+{{DECISION_FORMAT}}

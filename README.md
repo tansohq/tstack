@@ -2,7 +2,7 @@
 
 Billing team for [Claude Code](https://claude.ai/claude-code).
 
-tstack is a monetization team for usage-based SaaS products. Two layers: a **design chain** that builds billing systems from scratch (7 skills, artifact-chained), and a **review team** that audits, operates, and monitors billing that exists (15 skills, reactive). Derived from real self-serve billing operations.
+tstack is a monetization team for usage-based SaaS products. Two layers: a **design chain** that builds billing systems from scratch (7 skills, artifact-chained), and a **review team** that audits, operates, and monitors billing that exists (12 skills, reactive). Derived from real self-serve billing operations.
 
 ## Install
 
@@ -52,8 +52,7 @@ Run any team skill directly. They read chain artifacts (if they exist) or work f
 
 | Skill | Lens | What it does |
 |-------|------|-------------|
-| `/account-operations` | Support / ops | Upgrade, downgrade, cancellation, and refund playbooks |
-| `/credit-operations` | Customer success | Credit swaps, goodwill grants, manual adjustments |
+| `/billing-operations` | Support / ops / CS | Account lifecycle + credit management playbooks |
 | `/migration-planner` | PM | Plan pricing changes with grandfathering and rollback |
 
 ### Intelligence
@@ -61,27 +60,20 @@ Run any team skill directly. They read chain artifacts (if they exist) or work f
 | Skill | Lens | What it does |
 |-------|------|-------------|
 | `/revenue-reporter` | Finance | MRR/ARR, revenue recognition with credits, churn decomposition |
-| `/pql-scorer` | Growth / sales | Product-qualified lead scoring from usage patterns |
-| `/usage-intelligence` | CS / account mgmt | Account health, churn risk, credit run-out projection |
+| `/account-intelligence` | CS / growth | Account health, churn risk, PQL scoring, credit run-out |
 | `/api-health-analyst` | Reliability | Per-account error rates, customer vs platform error attribution |
 
-### Infrastructure
+### Observability
 
 | Skill | Lens | What it does |
 |-------|------|-------------|
-| `/billing-incident-investigator` | On-call | Trace billing discrepancies from meter to invoice |
-| `/billing-monitor` | Observability | Drift detection, webhook monitoring, usage spike alerting |
+| `/billing-observability` | On-call / SRE | Monitoring, alerting, drift detection, incident investigation |
 
-### Design
+### Design & Research
 
 | Skill | Lens | What it does |
 |-------|------|-------------|
 | `/billing-ux-designer` | Design | Usage dashboards, plan picker, credit run-out display |
-
-### Research
-
-| Skill | Lens | What it does |
-|-------|------|-------------|
 | `/pricing-researcher` | Market intel | Competitive pricing teardowns and model precedent research |
 
 ## How It Works

@@ -32,8 +32,7 @@ Billing team for usage-based products. Entitlement-centered.
 
 | Trigger | Skill |
 |---------|-------|
-| "upgrade path" / "downgrade" / "cancellation flow" / "refund" | /account-operations |
-| "credit swap" / "goodwill credit" / "manual adjustment" / "promotional credits" | /credit-operations |
+| "upgrade path" / "downgrade" / "cancellation" / "refund" / "credit swap" / "goodwill credit" | /billing-operations |
 | "pricing migration" / "grandfather" / "pricing change" / "rollback" | /migration-planner |
 
 #### Intelligence
@@ -41,16 +40,14 @@ Billing team for usage-based products. Entitlement-centered.
 | Trigger | Skill |
 |---------|-------|
 | "MRR" / "ARR" / "revenue report" / "churn decomposition" / "month-end" | /revenue-reporter |
-| "PQL" / "product qualified lead" / "usage scoring" / "lead routing" | /pql-scorer |
-| "account health" / "churn risk" / "expansion signal" / "run-out projection" | /usage-intelligence |
+| "account health" / "churn risk" / "PQL" / "usage scoring" / "run-out projection" | /account-intelligence |
 | "API health" / "error rates" / "per-account errors" / "latency trends" | /api-health-analyst |
 
-#### Infrastructure
+#### Observability
 
 | Trigger | Skill |
 |---------|-------|
-| "billing incident" / "trace event" / "usage divergence" / "double charge" | /billing-incident-investigator |
-| "billing monitor" / "drift detection" / "stale entitlements" / "usage spike" | /billing-monitor |
+| "billing monitor" / "drift detection" / "billing incident" / "billing discrepancy" / "double charge" | /billing-observability |
 
 #### Design
 

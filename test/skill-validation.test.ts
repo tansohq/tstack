@@ -78,20 +78,15 @@ const SKILL_CLASSES: Record<
     requiredTools: ["Bash", "Read", "Grep", "AskUserQuestion"],
   },
   "team-ops": {
-    skills: ["account-operations", "credit-operations", "migration-planner"],
+    skills: ["billing-operations", "migration-planner"],
     requiredTools: ["Bash", "Read", "Write", "Edit", "AskUserQuestion"],
   },
   "team-intelligence": {
-    skills: [
-      "revenue-reporter",
-      "pql-scorer",
-      "usage-intelligence",
-      "api-health-analyst",
-    ],
+    skills: ["revenue-reporter", "account-intelligence", "api-health-analyst"],
     requiredTools: ["Bash", "Read", "Grep", "AskUserQuestion"],
   },
-  "team-infra": {
-    skills: ["billing-incident-investigator", "billing-monitor"],
+  "team-observability": {
+    skills: ["billing-observability"],
     requiredTools: ["Bash", "Read", "Grep", "AskUserQuestion"],
   },
   "team-design": {
@@ -199,12 +194,12 @@ describe("Skill classification", () => {
     expect(CHAIN_SKILLS.length).toBe(7);
   });
 
-  test("team has 15 skills", () => {
-    expect(TEAM_SKILLS.length).toBe(15);
+  test("team has 12 skills", () => {
+    expect(TEAM_SKILLS.length).toBe(12);
   });
 
-  test("total classified is 23 (7 chain + 15 team + 1 orchestrator)", () => {
-    expect(ALL_CLASSIFIED_SKILLS.length).toBe(23);
+  test("total classified is 20 (7 chain + 12 team + 1 orchestrator)", () => {
+    expect(ALL_CLASSIFIED_SKILLS.length).toBe(20);
   });
 });
 
