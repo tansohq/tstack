@@ -1,6 +1,6 @@
 ---
 name: credit-ledger
-version: 1.0.0
+version: 2.1.0
 description: |
   Design credit pools, grants, FIFO consumption, rollover, and the append-only
   ledger. Reads PLAN.md + ENFORCEMENT.md, writes CREDITS.md. Use when asked to

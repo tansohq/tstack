@@ -1,6 +1,6 @@
 ---
 name: reconciliation
-version: 1.0.0
+version: 2.1.0
 description: |
   Design event-to-invoice tie-out and true-up mechanics. Engineering correctness:
   did we bill what we consumed? Reads all upstream artifacts, writes

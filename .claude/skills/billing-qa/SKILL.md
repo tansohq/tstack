@@ -1,6 +1,6 @@
 ---
 name: billing-qa
-version: 2.0.0
+version: 2.1.0
 description: |
   QA engineer specializing in billing edge cases. Generates test scenarios for
   free-to-paid conversion, mid-cycle changes, timezone boundaries, currency

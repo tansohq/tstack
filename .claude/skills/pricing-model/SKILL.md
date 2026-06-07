@@ -1,6 +1,6 @@
 ---
 name: pricing-model
-version: 1.0.0
+version: 2.1.0
 description: |
   Design PlanFeatureRules for a usage-based product. Reads METER.md, writes
   PLAN.md with plan tiers, pricing models (usage/graduated), flat+usage hybrids,

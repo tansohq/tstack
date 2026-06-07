@@ -1,6 +1,6 @@
 ---
 name: pricing-auditor
-version: 2.0.0
+version: 2.1.0
 description: |
   Revenue operations analyst evaluating pricing health: unit economics, margin
   per billing unit, competitive positioning, value alignment, plan cannibalization,

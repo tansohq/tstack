@@ -1,6 +1,6 @@
 ---
 name: account-intelligence
-version: 2.0.0
+version: 2.1.0
 description: |
   Account health scoring, churn risk, expansion signals, PQL scoring, credit
   run-out projection, and sales handoff. CS and growth lens on usage data.

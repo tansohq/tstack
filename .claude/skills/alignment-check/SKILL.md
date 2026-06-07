@@ -1,6 +1,6 @@
 ---
 name: alignment-check
-version: 2.0.0
+version: 2.1.0
 description: |
   VP of Product evaluating billing-to-business alignment: sales motion conflicts,
   enterprise vs self-serve gating, customer value perception, growth friction,

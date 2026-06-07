@@ -1,6 +1,6 @@
 ---
 name: billing-observability
-version: 2.0.0
+version: 2.1.0
 description: |
   Proactive monitoring and reactive investigation for billing systems. Drift
   detection, alerting, dashboard design, event tracing, timeline reconstruction,

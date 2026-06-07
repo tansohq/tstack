@@ -1,6 +1,6 @@
 ---
 name: provider-integration
-version: 1.0.0
+version: 2.1.0
 description: |
   Design provider-agnostic integration layer sitting on top of Stripe/Paddle/etc.
   Reads all upstream artifacts, writes INTEGRATION.md. Use when asked to "integrate

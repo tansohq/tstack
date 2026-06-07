@@ -1,6 +1,6 @@
 ---
 name: metering-correctness
-version: 1.0.0
+version: 2.1.0
 description: |
   Usage metering correctness auditor. Reviews event instrumentation code for
   idempotency gaps, deduplication failures, recursion loops (metering that
@@ -59,6 +59,10 @@ Read these artifacts if they exist:
 If no artifacts exist, work directly from the codebase.
 
 ## Methodology
+
+<!-- Custom Map→Audit→Report instead of shared REACTIVE_METHODOLOGY:
+     metering audits must first trace the full pipeline (ingestion→storage→
+     aggregation→billing) before checking correctness. Intentional divergence. -->
 
 ### Phase 1: Map the Pipeline
 

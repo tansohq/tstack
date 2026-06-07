@@ -1,6 +1,6 @@
 ---
 name: migration-planner
-version: 2.0.0
+version: 2.1.0
 description: |
   Product manager planning a pricing model change. Produces playbooks for
   grandfathering, customer communication, rollback strategy, migration

@@ -1,6 +1,6 @@
 ---
 name: api-health-analyst
-version: 2.0.0
+version: 2.1.0
 description: |
   Reliability engineer analyzing API health from the customer's perspective.
   Computes per-account error rates, classifies errors by attribution (customer

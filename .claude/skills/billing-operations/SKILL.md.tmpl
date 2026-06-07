@@ -1,6 +1,6 @@
 ---
 name: billing-operations
-version: 2.0.0
+version: 2.1.0
 description: |
   Playbooks for account lifecycle and credit management. Upgrades, downgrades,
   cancellations, refunds, credit swaps, goodwill grants, manual adjustments,

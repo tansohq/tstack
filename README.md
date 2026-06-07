@@ -2,7 +2,7 @@
 
 Billing team for [Claude Code](https://claude.ai/claude-code).
 
-tstack is a monetization team for usage-based SaaS products. Two layers: a **design chain** that builds billing systems from scratch (7 skills, artifact-chained), and a **review team** that audits, operates, and monitors billing that exists (12 skills, reactive). Derived from real self-serve billing operations.
+tstack is a monetization team for usage-based SaaS products. Two layers: a **design chain** that builds billing systems from scratch (7 skills, artifact-chained), and a **review team** that audits, operates, and monitors billing that exists (15 skills, reactive). Derived from real self-serve billing operations.
 
 ## Install
 

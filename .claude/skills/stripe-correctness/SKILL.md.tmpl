@@ -1,6 +1,6 @@
 ---
 name: stripe-correctness
-version: 1.0.0
+version: 2.1.0
 description: |
   Stripe integration footgun detector. Audits code for the 20+ Stripe-specific
   mistakes that ship to production — webhook signature gaps, missing idempotency,
@@ -44,6 +44,10 @@ Read these artifacts if they exist:
 If no artifacts exist, work directly from the codebase.
 
 ## Methodology
+
+<!-- Custom Discover→Audit→Report instead of shared REACTIVE_METHODOLOGY:
+     code-auditing skills need to grep for the integration surface first,
+     not form hypotheses from artifacts. Intentional divergence. -->
 
 ### Phase 1: Discover
 

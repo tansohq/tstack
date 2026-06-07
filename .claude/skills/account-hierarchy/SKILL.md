@@ -1,6 +1,6 @@
 ---
 name: account-hierarchy
-version: 1.0.0
+version: 2.1.0
 description: |
   Design account hierarchy, credit allocation cascading, API key scoping, and
   reseller models. Reads CREDITS.md + ENFORCEMENT.md, writes HIERARCHY.md.

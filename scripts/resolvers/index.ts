@@ -1,7 +1,6 @@
 export type ResolverFn = () => string;
 
 import {
-  ALLOWED_TOOLS_STANDARD,
   ALLOWED_TOOLS_CHAIN,
   ALLOWED_TOOLS_ORCHESTRATOR,
   ALLOWED_TOOLS_REVIEW,
@@ -17,7 +16,6 @@ import { ARTIFACT_READ_PROTOCOL } from "./artifacts";
 import { CREDIT_RUNOUT_PROJECTION } from "./credit-runout";
 
 export const RESOLVERS: Record<string, ResolverFn> = {
-  ALLOWED_TOOLS_STANDARD,
   ALLOWED_TOOLS_CHAIN,
   ALLOWED_TOOLS_ORCHESTRATOR,
   ALLOWED_TOOLS_REVIEW,

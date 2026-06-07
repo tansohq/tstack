@@ -1,6 +1,6 @@
 ---
 name: state-machine-guard
-version: 1.0.0
+version: 2.1.0
 description: |
   Subscription state machine auditor. Verifies that subscription lifecycle code
   handles all valid transitions, triggers required side effects (entitlement
@@ -46,6 +46,10 @@ Read these artifacts if they exist:
 If no artifacts exist, work directly from the codebase.
 
 ## Methodology
+
+<!-- Custom Extract→Audit→Report instead of shared REACTIVE_METHODOLOGY:
+     state machine auditing must first extract the implicit machine from code
+     before it can be audited. Intentional divergence. -->
 
 ### Phase 1: Extract the State Machine
 

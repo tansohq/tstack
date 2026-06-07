@@ -1,6 +1,6 @@
 ---
 name: billing-reviewer
-version: 2.0.0
+version: 2.1.0
 description: |
   Senior backend engineer auditing a billing implementation for race conditions,
   double-charge scenarios, event ordering bugs, credit pool atomicity failures,

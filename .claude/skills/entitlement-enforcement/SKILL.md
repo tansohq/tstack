@@ -1,6 +1,6 @@
 ---
 name: entitlement-enforcement
-version: 1.0.0
+version: 2.1.0
 description: |
   Design real-time entitlement enforcement: check-before-consume, allow/deny,
   hard/soft limits, simulation, fail-open. Reads PLAN.md, writes ENFORCEMENT.md.

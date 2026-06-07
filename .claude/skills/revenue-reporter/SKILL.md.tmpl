@@ -1,6 +1,6 @@
 ---
 name: revenue-reporter
-version: 2.0.0
+version: 2.1.0
 description: |
   Finance analyst closing the books on a usage-based product. Computes MRR/ARR
   from usage-based billing, handles revenue recognition with credits (ASC 606),

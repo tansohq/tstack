@@ -10,7 +10,6 @@ const DESIGN_TOOLS = ["Bash", "Read", "Write", "AskUserQuestion"];
 const RESEARCH_TOOLS = ["Bash", "Read", "Grep", "WebSearch", "AskUserQuestion"];
 const ORCHESTRATOR_TOOLS = [...CHAIN_TOOLS, "Agent"];
 
-export const ALLOWED_TOOLS_STANDARD: ResolverFn = () => yaml(CHAIN_TOOLS);
 export const ALLOWED_TOOLS_CHAIN: ResolverFn = () => yaml(CHAIN_TOOLS);
 export const ALLOWED_TOOLS_ORCHESTRATOR: ResolverFn = () =>
   yaml(ORCHESTRATOR_TOOLS);

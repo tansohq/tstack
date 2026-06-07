@@ -1,6 +1,6 @@
 ---
 name: billing-ux-designer
-version: 2.0.0
+version: 2.1.0
 description: |
   Product designer specializing in billing and usage dashboards. Designs usage
   visualization, credit displays, invoice pages, plan pickers, upgrade flows,

@@ -145,9 +145,9 @@ describe("Frontmatter structure", () => {
       expect(fm.name).toBe(dir);
     });
 
-    test(`${dir}: version is valid semver (X.Y.Z)`, () => {
-      expect(typeof fm.version).toBe("string");
-      expect(fm.version as string).toMatch(/^\d+\.\d+\.\d+$/);
+    test(`${dir}: version matches package version`, () => {
+      const pkgVersion = readFileSync(join(ROOT, "VERSION"), "utf-8").trim();
+      expect(fm.version).toBe(pkgVersion);
     });
 
     test(`${dir}: triggers is a non-empty array`, () => {

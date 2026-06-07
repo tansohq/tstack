@@ -1,6 +1,6 @@
 ---
 name: monetization-engineer
-version: 1.0.0
+version: 2.1.0
 description: |
   Billing engineer orchestrator for usage-based products. Entitlement-first,
   not invoice-first. Routes through the monetization design chain: meter →
