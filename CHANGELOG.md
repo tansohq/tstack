@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.1.0] - 2026-06-07
+
+Three new review skills focused on the correctness bugs that cost real money —
+Stripe API footguns, subscription state machine violations, and usage metering
+pipeline errors. Each fills a gap between `/billing-reviewer` (general) and
+the domain-specific audit these systems need.
+
+### Added
+
+- `/stripe-correctness` — 14 Stripe API footgun categories: webhook signature
+  verification, idempotency key misuse, subscription state machine violations,
+  proration math, event type coverage gaps, test/live mode leaks, API version
+  drift, customer hygiene, error handling, invoice lifecycle, metadata expansion,
+  currency handling, checkout race conditions, metering conflicts
+- `/state-machine-guard` — extracts the actual subscription state machine from
+  code, then audits: missing transitions, incomplete side effects, impossible
+  transitions, race conditions, entitlement consistency, period boundary bugs,
+  upgrade/downgrade edge cases
+- `/metering-correctness` — 8 usage metering pipeline categories: idempotency,
+  recursion/feedback loops, clock skew, event schema correctness, aggregation
+  bugs, late-arriving events, multi-tenancy attribution, cost calculation timing
+
+### Changed
+
+- Team review skills: 4 → 7 (billing-reviewer, stripe-correctness,
+  state-machine-guard, metering-correctness, pricing-auditor, billing-qa,
+  alignment-check)
+- Total skill count: 20 → 23
+
 ## [2.0.0] - 2026-06-04
 
 From billing workflow to billing team. Adds 15 reactive "team" skills alongside

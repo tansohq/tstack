@@ -44,6 +44,9 @@ Run any team skill directly. They read chain artifacts (if they exist) or work f
 | Skill | Lens | What it does |
 |-------|------|-------------|
 | `/billing-reviewer` | Backend dev | Audit for race conditions, double-charges, idempotency gaps |
+| `/stripe-correctness` | Backend dev | Detect 14 Stripe API footguns — webhooks, proration, state machine, currency |
+| `/state-machine-guard` | Backend dev | Extract and audit subscription state transitions, missing side effects, races |
+| `/metering-correctness` | Backend dev | Find idempotency gaps, recursion loops, clock skew, and aggregation bugs in usage metering |
 | `/pricing-auditor` | Rev ops / finance | Evaluate unit economics, margins, competitive position |
 | `/billing-qa` | QA | Generate edge case test scenarios (proration, timezone, currency) |
 | `/alignment-check` | Cross-functional | Check pricing vs sales motion, enterprise vs self-serve conflicts |

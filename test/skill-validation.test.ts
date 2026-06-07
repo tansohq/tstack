@@ -71,6 +71,9 @@ const SKILL_CLASSES: Record<
   "team-review": {
     skills: [
       "billing-reviewer",
+      "stripe-correctness",
+      "state-machine-guard",
+      "metering-correctness",
       "pricing-auditor",
       "billing-qa",
       "alignment-check",
@@ -194,12 +197,12 @@ describe("Skill classification", () => {
     expect(CHAIN_SKILLS.length).toBe(7);
   });
 
-  test("team has 12 skills", () => {
-    expect(TEAM_SKILLS.length).toBe(12);
+  test("team has 15 skills", () => {
+    expect(TEAM_SKILLS.length).toBe(15);
   });
 
-  test("total classified is 20 (7 chain + 12 team + 1 orchestrator)", () => {
-    expect(ALL_CLASSIFIED_SKILLS.length).toBe(20);
+  test("total classified is 23 (7 chain + 15 team + 1 orchestrator)", () => {
+    expect(ALL_CLASSIFIED_SKILLS.length).toBe(23);
   });
 });
 

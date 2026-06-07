@@ -24,6 +24,9 @@ Billing team for usage-based products. Entitlement-centered.
 | Trigger | Skill |
 |---------|-------|
 | "review billing code" / "audit billing" / "race conditions" / "idempotency" | /billing-reviewer |
+| "check Stripe" / "Stripe audit" / "webhook bugs" / "Stripe correctness" / "Stripe footguns" | /stripe-correctness |
+| "subscription states" / "state machine" / "transition bugs" / "lifecycle audit" | /state-machine-guard |
+| "metering bugs" / "usage events" / "event instrumentation" / "deduplication" | /metering-correctness |
 | "audit pricing" / "unit economics" / "margins" / "competitive position" | /pricing-auditor |
 | "billing QA" / "edge cases" / "proration" / "timezone" / "currency" | /billing-qa |
 | "alignment check" / "pricing vs sales" / "enterprise vs self-serve" | /alignment-check |
